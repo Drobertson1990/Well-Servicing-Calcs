@@ -129,7 +129,7 @@ Supports trimming, section deletion, and multiple wall thicknesses.
                 st.session_state.ct_strings[string_name] = []
 
             st.session_state.ct_strings[string_name].append(section)
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Please fill in all fields and name the string.")
 
@@ -145,17 +145,16 @@ Supports trimming, section deletion, and multiple wall thicknesses.
 
         sections = st.session_state.ct_strings[selected_string]
 
-        # ----- TRIM WHIP END (FIXED) -----
+        # ----- TRIM WHIP END -----
         st.markdown("### Trim Whip End")
 
-        st.session_state.trim_amount = st.number_input(
+        trim_m = st.number_input(
             "Remove length from whip end (m)",
-            min_value=0.0,
-            key="trim_input"
+            min_value=0.0
         )
 
         if st.button("Apply trim"):
-            remaining = st.session_state.trim_amount
+            remaining = trim_m
 
             while remaining > 0 and sections:
                 if sections[0]["length_m"] > remaining:
@@ -165,8 +164,7 @@ Supports trimming, section deletion, and multiple wall thicknesses.
                     remaining -= sections[0]["length_m"]
                     sections.pop(0)
 
-            st.session_state.trim_amount = 0.0
-            st.experimental_rerun()
+            st.rerun()
 
         # ----- DISPLAY STRING DETAILS -----
         st.markdown("---")
@@ -204,7 +202,7 @@ Supports trimming, section deletion, and multiple wall thicknesses.
             with col_b:
                 if st.button("❌", key=f"del_{i}"):
                     sections.pop(i - 1)
-                    st.experimental_rerun()
+                    st.rerun()
 
         st.markdown("---")
         st.success(f"Total length: {total_length:.1f} m")
