@@ -1,39 +1,27 @@
 import streamlit as st
 import math
 
-# ===============================
-# Session State Initialization
-# ===============================
-if "ct_strings" not in st.session_state:
-    st.session_state.ct_strings = {}
-
-# ===============================
-# Page Config
-# ===============================
+# ---------- PAGE CONFIG ----------
 st.set_page_config(
     page_title="Well Servicing Calculator",
     layout="wide"
 )
 
-# ===============================
-# Header
-# ===============================
+# ---------- SESSION STATE ----------
+if "ct_strings" not in st.session_state:
+    st.session_state.ct_strings = {}
+
+# ---------- HEADER ----------
 st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
 
 st.markdown("""
-Field-ready calculations for oilfield operations.
-
-Designed to:
-- Save time
-- Reduce errors
-- Standardize job planning
+Field-ready calculations for oilfield operations.  
+Designed to save time, reduce errors, and standardize job planning.
 """)
 
-# ===============================
-# Sidebar
-# ===============================
-st.sidebar.header("Navigation")
+# ---------- SIDEBAR ----------
+st.sidebar.header("Calculators")
 
 st.sidebar.subheader("Well Schematic")
 schematic = st.sidebar.file_uploader(
@@ -42,46 +30,30 @@ schematic = st.sidebar.file_uploader(
 )
 
 calc = st.sidebar.selectbox(
-    "Choose a tool",
+    "Choose a calculator",
     [
         "Home",
         "Annular Velocity",
+        "Pipe Capacity",
         "CT String Builder",
-        "Pipe Capacity (coming soon)",
-        "Fluid Volumes (coming soon)",
+        "Fluid Volumes",
     ]
 )
 
-# ===============================
-# Main Content
-# ===============================
-
-# -------- HOME --------
+# ---------- HOME ----------
 if calc == "Home":
     st.header("Welcome")
-    st.write(
-        "Select a tool from the left menu. "
-        "This application is built for daily field and office calculations."
-    )
+    st.write("Select a calculator from the left menu.")
 
-# -------- ANNULAR VELOCITY --------
+# ---------- ANNULAR VELOCITY ----------
 elif calc == "Annular Velocity":
     st.header("Annular Velocity")
 
-    st.subheader("Pipe Geometry")
-
-    outer_id_mm = st.number_input(
-        "Outer pipe ID (mm)",
-        min_value=0.0
-    )
-
-    inner_od_mm = st.number_input(
-        "Inner pipe OD (mm)",
-        min_value=0.0
-    )
+    st.subheader("Pipe Information")
+    outer_id_mm = st.number_input("Outer pipe ID (mm)", min_value=0.0)
+    inner_od_mm = st.number_input("Inner pipe OD (mm)", min_value=0.0)
 
     st.subheader("Pump Rate")
-
     rate_unit = st.selectbox(
         "Pump rate unit",
         ["m³/min", "L/min", "bbl/min"]
@@ -93,7 +65,6 @@ elif calc == "Annular Velocity":
     )
 
     if outer_id_mm > inner_od_mm > 0:
-        # Convert mm → m
         outer_id_m = outer_id_mm / 1000
         inner_od_m = inner_od_mm / 1000
 
@@ -101,7 +72,6 @@ elif calc == "Annular Velocity":
         inner_area = math.pi * (inner_od_m / 2) ** 2
         annular_area = outer_area - inner_area
 
-        # Convert rate to m³/min
         if rate_unit == "L/min":
             rate_m3 = rate / 1000
         elif rate_unit == "bbl/min":
@@ -110,69 +80,61 @@ elif calc == "Annular Velocity":
             rate_m3 = rate
 
         velocity = rate_m3 / annular_area
-
         st.success(f"Annular velocity: {velocity:.2f} m/min")
-        st.caption(f"Annular area: {annular_area:.4f} m²")
     else:
-        st.warning("Outer pipe ID must be larger than inner pipe OD.")
+        st.warning("Outer ID must be larger than inner OD.")
 
-# -------- CT STRING BUILDER --------
+# ---------- PIPE CAPACITY ----------
+elif calc == "Pipe Capacity":
+    st.header("Pipe Capacity")
+    st.info("Calculator coming soon.")
+
+# ---------- CT STRING BUILDER ----------
 elif calc == "CT String Builder":
     st.header("CT String Builder")
 
-    st.markdown(
-        "Build and save coiled tubing strings with multiple wall thickness sections."
-    )
+    st.markdown("""
+Build and save coiled tubing strings **from Whip End to Core**.  
+Supports multiple wall thickness sections.
+""")
 
     string_name = st.text_input("CT String name")
 
-    st.subheader("Add Section")
+    st.subheader("Add Section (Whip → Core)")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        length_m = st.number_input(
-            "Section length (m)",
-            min_value=0.0
-        )
+        length_m = st.number_input("Section length (m)", min_value=0.0)
 
     with col2:
-        od_mm = st.number_input(
-            "OD (mm)",
-            min_value=0.0
-        )
+        od_mm = st.number_input("OD (mm)", min_value=0.0)
 
     with col3:
-        wall_mm = st.number_input(
-            "Wall thickness (mm)",
-            min_value=0.0
-        )
+        wall_mm = st.number_input("Wall thickness (mm)", min_value=0.0)
 
     if st.button("Add section"):
         if string_name and length_m > 0 and od_mm > 0 and wall_mm > 0:
-            if wall_mm * 2 >= od_mm:
-                st.error("Wall thickness too large for given OD.")
-            else:
-                section = {
-                    "length_m": length_m,
-                    "od_mm": od_mm,
-                    "wall_mm": wall_mm
-                }
+            section = {
+                "length_m": length_m,
+                "od_mm": od_mm,
+                "wall_mm": wall_mm
+            }
 
-                if string_name not in st.session_state.ct_strings:
-                    st.session_state.ct_strings[string_name] = []
+            if string_name not in st.session_state.ct_strings:
+                st.session_state.ct_strings[string_name] = []
 
-                st.session_state.ct_strings[string_name].append(section)
+            st.session_state.ct_strings[string_name].append(section)
         else:
-            st.warning("Enter all values and provide a string name.")
+            st.warning("Please fill in all fields and name the string.")
 
-    # ----- Display Saved Strings -----
+    # ---------- DISPLAY SAVED STRINGS ----------
     if st.session_state.ct_strings:
         st.markdown("---")
         st.subheader("Saved CT Strings")
 
         selected_string = st.selectbox(
-            "Select CT string",
+            "Select a CT string",
             list(st.session_state.ct_strings.keys())
         )
 
@@ -180,6 +142,9 @@ elif calc == "CT String Builder":
 
         total_length = 0.0
         total_volume = 0.0
+        running_depth = 0.0
+
+        st.markdown("**String orientation: Whip End → Core**")
 
         for i, sec in enumerate(sections, start=1):
             id_mm = sec["od_mm"] - 2 * sec["wall_mm"]
@@ -188,12 +153,16 @@ elif calc == "CT String Builder":
             area = math.pi * (id_m / 2) ** 2
             volume = area * sec["length_m"]
 
+            start_depth = running_depth
+            end_depth = running_depth + sec["length_m"]
+
+            running_depth = end_depth
             total_length += sec["length_m"]
             total_volume += volume
 
             st.write(
                 f"Section {i}: "
-                f"{sec['length_m']} m | "
+                f"{start_depth:.0f}–{end_depth:.0f} m | "
                 f"OD {sec['od_mm']} mm | "
                 f"Wall {sec['wall_mm']} mm | "
                 f"Volume {volume:.3f} m³"
@@ -203,18 +172,12 @@ elif calc == "CT String Builder":
         st.success(f"Total length: {total_length:.1f} m")
         st.success(f"Total internal volume: {total_volume:.3f} m³")
 
-# -------- PLACEHOLDERS --------
-elif calc == "Pipe Capacity (coming soon)":
-    st.header("Pipe Capacity")
-    st.info("Calculator coming soon.")
-
-elif calc == "Fluid Volumes (coming soon)":
+# ---------- FLUID VOLUMES ----------
+elif calc == "Fluid Volumes":
     st.header("Fluid Volumes")
     st.info("Calculator coming soon.")
 
-# ===============================
-# Well Schematic Display
-# ===============================
+# ---------- SCHEMATIC DISPLAY ----------
 if schematic:
     st.markdown("---")
     st.subheader("Well Schematic")
