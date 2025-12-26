@@ -30,6 +30,10 @@ calc = st.sidebar.selectbox(
     ]
 )
 
+if calc == "Home":
+    st.header("Welcome")
+    st.write("Select a calculator from the left menu.")
+
 elif calc == "Annular Velocity":
     st.header("Annular Velocity")
 
@@ -49,7 +53,6 @@ elif calc == "Annular Velocity":
     )
 
     if annular_area > 0:
-        # Convert rate to m³/min
         if rate_unit == "L/min":
             rate_m3 = rate / 1000
         elif rate_unit == "bbl/min":
@@ -58,8 +61,11 @@ elif calc == "Annular Velocity":
             rate_m3 = rate
 
         velocity = rate_m3 / annular_area
-
         st.success(f"Annular velocity: {velocity:.2f} m/min")
+
+elif calc == "Pipe Capacity":
+    st.header("Pipe Capacity")
+    st.info("Calculator coming soon.")
 
 elif calc == "Pipe Capacity":
     st.header("Pipe Capacity")
