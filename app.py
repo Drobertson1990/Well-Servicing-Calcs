@@ -19,6 +19,14 @@ This tool is designed for **field-ready calculations**:
 
 st.sidebar.header("Calculators")
 
+st.sidebar.subheader("Well Schematic")
+
+schematic = st.sidebar.file_uploader(
+    "Upload well schematic",
+    type=["png", "jpg", "jpeg", "pdf"]
+)
+
+
 calc = st.sidebar.selectbox(
     "Choose a calculator",
     [
@@ -33,6 +41,14 @@ calc = st.sidebar.selectbox(
 if calc == "Home":
     st.header("Welcome")
     st.write("Select a calculator from the left menu.")
+
+if schematic:
+    st.subheader("Well Schematic")
+
+    if schematic.type == "application/pdf":
+        st.info("PDF uploaded. Display support coming soon.")
+    else:
+        st.image(schematic, use_column_width=True)
 
 elif calc == "Annular Velocity":
     st.header("Annular Velocity")
