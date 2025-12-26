@@ -86,7 +86,7 @@ elif calc == "Pipe Capacity":
     st.header("Pipe Capacity")
     st.info("Calculator coming soon.")
 
-elif calc == "CT String Builder (coming soon)":
+elif calc == "CT String Builder":
     st.header("CT String Builder")
 
     st.markdown("Build and save coiled tubing strings with multiple wall thickness sections.")
