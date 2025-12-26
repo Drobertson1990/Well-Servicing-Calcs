@@ -30,15 +30,36 @@ calc = st.sidebar.selectbox(
     ]
 )
 
-if calc == "Annular Velocity":
+elif calc == "Annular Velocity":
     st.header("Annular Velocity")
 
-    rate = st.number_input("Pump rate", min_value=0.0)
-    annular_area = st.number_input("Annular area", min_value=0.0)
+    rate_unit = st.selectbox(
+        "Pump rate unit",
+        ["m³/min", "L/min", "bbl/min"]
+    )
+
+    rate = st.number_input(
+        f"Pump rate ({rate_unit})",
+        min_value=0.0
+    )
+
+    annular_area = st.number_input(
+        "Annular area (m²)",
+        min_value=0.0
+    )
 
     if annular_area > 0:
-        velocity = rate / annular_area
-        st.success(f"Annular velocity: {velocity:.2f}")
+        # Convert rate to m³/min
+        if rate_unit == "L/min":
+            rate_m3 = rate / 1000
+        elif rate_unit == "bbl/min":
+            rate_m3 = rate * 0.158987
+        else:
+            rate_m3 = rate
+
+        velocity = rate_m3 / annular_area
+
+        st.success(f"Annular velocity: {velocity:.2f} m/min")
 
 elif calc == "Pipe Capacity":
     st.header("Pipe Capacity")
