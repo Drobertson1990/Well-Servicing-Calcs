@@ -1,5 +1,9 @@
 import streamlit as st
 import math
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import tempfile
+import os
 
 # ==============================
 # PAGE CONFIG
@@ -12,8 +16,8 @@ st.set_page_config(
 # ==============================
 # SESSION STATE
 # ==============================
-if "ct_strings" not in st.session_state:
-    st.session_state.ct_strings = {}
+if "jobs" not in st.session_state:
+    st.session_state.jobs = {}
 
 # ==============================
 # HEADER
@@ -29,22 +33,20 @@ Designed to save time, reduce errors, and standardize job planning.
 # ==============================
 # SIDEBAR
 # ==============================
-st.sidebar.header("Calculators")
+st.sidebar.header("Job / Well")
 
-st.sidebar.subheader("Well Schematic")
-schematic = st.sidebar.file_uploader(
-    "Upload well schematic",
-    type=["png", "jpg", "jpeg", "pdf"]
-)
+job_name = st.sidebar.text_input("Job / Well name")
+
+if job_name:
+    if job_name not in st.session_state.jobs:
+        st.session_state.jobs[job_name] = {}
 
 calc = st.sidebar.selectbox(
     "Choose a calculator",
     [
         "Home",
         "Annular Velocity",
-        "Pipe Capacity",
         "CT String Builder",
-        "Fluid Volumes",
     ]
 )
 
@@ -53,7 +55,7 @@ calc = st.sidebar.selectbox(
 # ==============================
 if calc == "Home":
     st.header("Welcome")
-    st.write("Select a calculator from the left menu.")
+    st.write("Select a calculator from the menu.")
 
 # ==============================
 # ANNULAR VELOCITY
@@ -61,48 +63,41 @@ if calc == "Home":
 elif calc == "Annular Velocity":
     st.header("Annular Velocity")
 
-    st.subheader("Pipe Information")
-    outer_id_mm = st.number_input("Outer pipe ID (mm)", min_value=0.0)
-    inner_od_mm = st.number_input("Inner pipe OD (mm)", min_value=0.0)
-
-    st.subheader("Pump Rate")
-    rate_unit = st.selectbox(
-        "Pump rate unit",
-        ["m³/min", "L/min", "bbl/min"]
-    )
-
-    rate = st.number_input(
-        f"Pump rate ({rate_unit})",
-        min_value=0.0
-    )
-
-    if outer_id_mm > inner_od_mm > 0:
-        outer_id_m = outer_id_mm / 1000
-        inner_od_m = inner_od_mm / 1000
-
-        annular_area = (
-            math.pi * (outer_id_m / 2) ** 2
-            - math.pi * (inner_od_m / 2) ** 2
+    if not job_name or not st.session_state.jobs[job_name]:
+        st.warning("Create a job and CT string first.")
+    else:
+        string_name = st.selectbox(
+            "Select CT String",
+            list(st.session_state.jobs[job_name].keys())
         )
 
-        if rate_unit == "L/min":
-            rate_m3 = rate / 1000
-        elif rate_unit == "bbl/min":
-            rate_m3 = rate * 0.158987
-        else:
-            rate_m3 = rate
+        sections = st.session_state.jobs[job_name][string_name]["sections"]
 
-        velocity = rate_m3 / annular_area
-        st.success(f"Annular velocity: {velocity:.2f} m/min")
-    else:
-        st.warning("Outer ID must be larger than inner OD.")
+        min_id_mm = min(
+            sec["od_mm"] - 2 * sec["wall_mm"] for sec in sections
+        )
 
-# ==============================
-# PIPE CAPACITY (PLACEHOLDER)
-# ==============================
-elif calc == "Pipe Capacity":
-    st.header("Pipe Capacity")
-    st.info("Calculator coming soon.")
+        st.info(f"Using minimum CT ID: {min_id_mm:.2f} mm")
+
+        outer_id_mm = st.number_input("Casing / Tubing ID (mm)", min_value=0.0)
+
+        rate_unit = st.selectbox("Pump rate unit", ["m³/min", "L/min", "bbl/min"])
+        rate = st.number_input(f"Pump rate ({rate_unit})", min_value=0.0)
+
+        if outer_id_mm > min_id_mm:
+            outer_area = math.pi * (outer_id_mm / 2000) ** 2
+            inner_area = math.pi * (min_id_mm / 2000) ** 2
+            annular_area = outer_area - inner_area
+
+            if rate_unit == "L/min":
+                rate_m3 = rate / 1000
+            elif rate_unit == "bbl/min":
+                rate_m3 = rate * 0.158987
+            else:
+                rate_m3 = rate
+
+            velocity = rate_m3 / annular_area
+            st.success(f"Annular velocity: {velocity:.2f} m/min")
 
 # ==============================
 # CT STRING BUILDER
@@ -110,144 +105,114 @@ elif calc == "Pipe Capacity":
 elif calc == "CT String Builder":
     st.header("CT String Builder")
 
-    st.markdown("""
-Build and edit coiled tubing strings **from Whip End to Core**.  
-Supports multiple wall thickness sections and field adjustments.
-""")
+    if not job_name:
+        st.warning("Enter a Job / Well name in the sidebar.")
+    else:
+        string_name = st.text_input("CT String name")
 
-    # --------------------------
-    # STRING NAME
-    # --------------------------
-    string_name = st.text_input("CT String name")
+        max_pull = st.number_input(
+            "Max Pull (kN or daN)", min_value=0.0
+        )
+        max_cycle = st.number_input(
+            "Max Cycling Pressure (% of yield)", min_value=0.0
+        )
 
-    # --------------------------
-    # ADD SECTION
-    # --------------------------
-    st.subheader("Add Section (Whip → Core)")
+        if string_name and string_name not in st.session_state.jobs[job_name]:
+            st.session_state.jobs[job_name][string_name] = {
+                "sections": [],
+                "max_pull": max_pull,
+                "max_cycle": max_cycle,
+            }
 
-    col1, col2, col3 = st.columns(3)
+        # -------- ADD SECTION --------
+        st.subheader("Add Section (Whip → Core)")
+        col1, col2, col3 = st.columns(3)
 
-    with col1:
-        length_m = st.number_input("Section length (m)", min_value=0.0, key="len")
+        with col1:
+            length_m = st.number_input("Length (m)", min_value=0.0)
+        with col2:
+            od_mm = st.number_input("OD (mm)", min_value=0.0)
+        with col3:
+            wall_mm = st.number_input("Wall (mm)", min_value=0.0)
 
-    with col2:
-        od_mm = st.number_input("OD (mm)", min_value=0.0, key="od")
-
-    with col3:
-        wall_mm = st.number_input("Wall thickness (mm)", min_value=0.0, key="wall")
-
-    if st.button("Add section"):
-        if string_name and length_m > 0 and od_mm > 0 and wall_mm > 0:
-            if string_name not in st.session_state.ct_strings:
-                st.session_state.ct_strings[string_name] = []
-
-            st.session_state.ct_strings[string_name].append(
+        if st.button("Add section"):
+            st.session_state.jobs[job_name][string_name]["sections"].append(
                 {
                     "length_m": length_m,
                     "od_mm": od_mm,
                     "wall_mm": wall_mm,
                 }
             )
-        else:
-            st.warning("Please fill in all fields and name the string.")
 
-    # --------------------------
-    # EDIT EXISTING STRINGS
-    # --------------------------
-    if st.session_state.ct_strings:
-        st.markdown("---")
-        st.subheader("Saved CT Strings")
+        # -------- DISPLAY & EDIT --------
+        if string_name in st.session_state.jobs[job_name]:
+            sections = st.session_state.jobs[job_name][string_name]["sections"]
 
-        selected_string = st.selectbox(
-            "Select a CT string",
-            list(st.session_state.ct_strings.keys())
-        )
+            st.markdown("---")
+            st.markdown("**Whip End → Core**")
 
-        sections = st.session_state.ct_strings[selected_string]
+            running_depth = 0.0
+            total_length = 0.0
+            total_volume = 0.0
 
-        # --------------------------
-        # TRIM WHIP END (NO RERUN)
-        # --------------------------
-        st.markdown("### Trim Whip End")
+            for i, sec in enumerate(sections):
+                id_mm = sec["od_mm"] - 2 * sec["wall_mm"]
+                area = math.pi * (id_mm / 2000) ** 2
+                volume = area * sec["length_m"]
 
-        trim_m = st.number_input(
-            "Remove length from whip end (m)",
-            min_value=0.0,
-            key="trim"
-        )
+                start = running_depth
+                end = running_depth + sec["length_m"]
+                running_depth = end
 
-        if st.button("Apply trim"):
-            remaining = trim_m
-            new_sections = []
+                total_length += sec["length_m"]
+                total_volume += volume
 
-            for sec in sections:
-                if remaining <= 0:
-                    new_sections.append(sec)
-                elif sec["length_m"] > remaining:
-                    sec["length_m"] -= remaining
-                    new_sections.append(sec)
-                    remaining = 0
-                else:
-                    remaining -= sec["length_m"]
+                colA, colB, colC = st.columns([6, 1, 1])
 
-            st.session_state.ct_strings[selected_string] = new_sections
+                with colA:
+                    st.write(
+                        f"{start:.0f}–{end:.0f} m | "
+                        f"OD {sec['od_mm']} mm | "
+                        f"Wall {sec['wall_mm']} mm"
+                    )
 
-        # --------------------------
-        # DISPLAY STRING
-        # --------------------------
-        st.markdown("---")
-        st.markdown("**String orientation: Whip End → Core**")
+                with colB:
+                    if st.button("↑", key=f"up_{i}") and i > 0:
+                        sections[i - 1], sections[i] = sections[i], sections[i - 1]
 
-        total_length = 0.0
-        total_volume = 0.0
-        running_depth = 0.0
+                with colC:
+                    if st.button("↓", key=f"dn_{i}") and i < len(sections) - 1:
+                        sections[i + 1], sections[i] = sections[i], sections[i + 1]
 
-        for i, sec in enumerate(st.session_state.ct_strings[selected_string], start=1):
-            id_mm = sec["od_mm"] - 2 * sec["wall_mm"]
-            id_m = id_mm / 1000
+            st.success(f"Total length: {total_length:.1f} m")
+            st.success(f"Total volume: {total_volume:.3f} m³")
 
-            area = math.pi * (id_m / 2) ** 2
-            volume = area * sec["length_m"]
+            # -------- PDF EXPORT --------
+            if st.button("Export CT String PDF"):
+                fd, path = tempfile.mkstemp(".pdf")
+                c = canvas.Canvas(path, pagesize=letter)
 
-            start_depth = running_depth
-            end_depth = running_depth + sec["length_m"]
-            running_depth = end_depth
+                c.drawString(50, 750, f"Job: {job_name}")
+                c.drawString(50, 735, f"CT String: {string_name}")
+                c.drawString(50, 720, f"Max Pull: {max_pull}")
+                c.drawString(50, 705, f"Max Cycling %: {max_cycle}")
 
-            total_length += sec["length_m"]
-            total_volume += volume
+                y = 670
+                for sec in sections:
+                    c.drawString(
+                        50, y,
+                        f"{sec['length_m']} m | OD {sec['od_mm']} | Wall {sec['wall_mm']}"
+                    )
+                    y -= 15
 
-            col_a, col_b = st.columns([6, 1])
+                c.save()
 
-            with col_a:
-                st.write(
-                    f"Section {i}: {start_depth:.0f}–{end_depth:.0f} m | "
-                    f"OD {sec['od_mm']} mm | Wall {sec['wall_mm']} mm | "
-                    f"Volume {volume:.3f} m³"
-                )
+                with open(path, "rb") as f:
+                    st.download_button(
+                        "Download PDF",
+                        f,
+                        file_name=f"{string_name}.pdf"
+                    )
 
-            with col_b:
-                if st.button("❌", key=f"delete_{i}"):
-                    st.session_state.ct_strings[selected_string].pop(i - 1)
+                os.remove(path)
 
-        st.markdown("---")
-        st.success(f"Total length: {total_length:.1f} m")
-        st.success(f"Total internal volume: {total_volume:.3f} m³")
-
-# ==============================
-# FLUID VOLUMES (PLACEHOLDER)
-# ==============================
-elif calc == "Fluid Volumes":
-    st.header("Fluid Volumes")
-    st.info("Calculator coming soon.")
-
-# ==============================
-# SCHEMATIC DISPLAY
-# ==============================
-if schematic:
-    st.markdown("---")
-    st.subheader("Well Schematic")
-
-    if schematic.type == "application/pdf":
-        st.info("PDF uploaded. Display support coming soon.")
-    else:
-        st.image(schematic, use_column_width=True)
