@@ -1,6 +1,9 @@
 import streamlit as st
 import math
 
+if "ct_strings" not in st.session_state:
+    st.session_state.ct_strings = {}
+    
 st.set_page_config(
     page_title="Well Servicing Calculator",
     layout="wide"
@@ -85,7 +88,80 @@ elif calc == "Pipe Capacity":
 
 elif calc == "CT String Builder (coming soon)":
     st.header("CT String Builder")
-    st.info("This will allow saved CT strings with multiple wall thickness sections.")
+
+    st.markdown("Build and save coiled tubing strings with multiple wall thickness sections.")
+
+    string_name = st.text_input("CT String name")
+
+    st.subheader("Add Section")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        length_m = st.number_input("Section length (m)", min_value=0.0)
+
+    with col2:
+        od_mm = st.number_input("OD (mm)", min_value=0.0)
+
+    with col3:
+        wall_mm = st.number_input("Wall thickness (mm)", min_value=0.0)
+
+    if st.button("Add section"):
+        if string_name and length_m > 0 and od_mm > 0 and wall_mm > 0:
+            section = {
+                "length_m": length_m,
+                "od_mm": od_mm,
+                "wall_mm": wall_mm
+            }
+
+            if string_name not in st.session_state.ct_strings:
+                st.session_state.ct_strings[string_name] = []
+
+            st.session_state.ct_strings[string_name].append(section)
+        else:
+            st.warning("Fill in all fields and name the string.")
+
+    # ---- Display Saved Strings ----
+    if st.session_state.ct_strings:
+        st.markdown("---")
+        st.subheader("Saved CT Strings")
+
+        selected_string = st.selectbox(
+            "Select a CT string",
+            list(st.session_state.ct_strings.keys())
+        )
+
+        sections = st.session_state.ct_strings[selected_string]
+
+        total_length = 0.0
+        total_volume = 0.0
+
+        st.markdown("**Sections:**")
+
+        for i, sec in enumerate(sections, start=1):
+            id_mm = sec["od_mm"] - 2 * sec["wall_mm"]
+
+            # Convert mm → m
+            id_m = id_mm / 1000
+            area = math.pi * (id_m / 2) ** 2
+
+            volume = area * sec["length_m"]
+
+            total_length += sec["length_m"]
+            total_volume += volume
+
+            st.write(
+                f"Section {i}: "
+                f"{sec['length_m']} m | "
+                f"OD {sec['od_mm']} mm | "
+                f"Wall {sec['wall_mm']} mm | "
+                f"Volume {volume:.3f} m³"
+            )
+
+        st.markdown("---")
+        st.success(f"Total length: {total_length:.1f} m")
+        st.success(f"Total internal volume: {total_volume:.3f} m³")
+
 
 elif calc == "Fluid Volumes":
     st.header("Fluid Volumes")
