@@ -11,6 +11,9 @@ st.set_page_config(
 if "ct_strings" not in st.session_state:
     st.session_state.ct_strings = {}
 
+if "trim_amount" not in st.session_state:
+    st.session_state.trim_amount = 0.0
+
 # ---------- HEADER ----------
 st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
@@ -126,6 +129,7 @@ Supports trimming, section deletion, and multiple wall thicknesses.
                 st.session_state.ct_strings[string_name] = []
 
             st.session_state.ct_strings[string_name].append(section)
+            st.experimental_rerun()
         else:
             st.warning("Please fill in all fields and name the string.")
 
@@ -141,16 +145,17 @@ Supports trimming, section deletion, and multiple wall thicknesses.
 
         sections = st.session_state.ct_strings[selected_string]
 
-        # ----- TRIM WHIP END -----
+        # ----- TRIM WHIP END (FIXED) -----
         st.markdown("### Trim Whip End")
 
-        trim_m = st.number_input(
+        st.session_state.trim_amount = st.number_input(
             "Remove length from whip end (m)",
-            min_value=0.0
+            min_value=0.0,
+            key="trim_input"
         )
 
-        if st.button("Trim whip end"):
-            remaining = trim_m
+        if st.button("Apply trim"):
+            remaining = st.session_state.trim_amount
 
             while remaining > 0 and sections:
                 if sections[0]["length_m"] > remaining:
@@ -159,6 +164,9 @@ Supports trimming, section deletion, and multiple wall thicknesses.
                 else:
                     remaining -= sections[0]["length_m"]
                     sections.pop(0)
+
+            st.session_state.trim_amount = 0.0
+            st.experimental_rerun()
 
         # ----- DISPLAY STRING DETAILS -----
         st.markdown("---")
