@@ -94,12 +94,13 @@ elif calc == "CT String Builder":
     st.header("CT String Builder")
 
     st.markdown("""
-Build and save coiled tubing strings **from Whip End to Core**.  
-Supports multiple wall thickness sections.
+Build and edit coiled tubing strings **from Whip End to Core**.  
+Supports trimming, section deletion, and multiple wall thicknesses.
 """)
 
     string_name = st.text_input("CT String name")
 
+    # ----- ADD SECTION -----
     st.subheader("Add Section (Whip → Core)")
 
     col1, col2, col3 = st.columns(3)
@@ -128,7 +129,7 @@ Supports multiple wall thickness sections.
         else:
             st.warning("Please fill in all fields and name the string.")
 
-    # ---------- DISPLAY SAVED STRINGS ----------
+    # ----- DISPLAY & EDIT STRINGS -----
     if st.session_state.ct_strings:
         st.markdown("---")
         st.subheader("Saved CT Strings")
@@ -140,11 +141,32 @@ Supports multiple wall thickness sections.
 
         sections = st.session_state.ct_strings[selected_string]
 
+        # ----- TRIM WHIP END -----
+        st.markdown("### Trim Whip End")
+
+        trim_m = st.number_input(
+            "Remove length from whip end (m)",
+            min_value=0.0
+        )
+
+        if st.button("Trim whip end"):
+            remaining = trim_m
+
+            while remaining > 0 and sections:
+                if sections[0]["length_m"] > remaining:
+                    sections[0]["length_m"] -= remaining
+                    remaining = 0
+                else:
+                    remaining -= sections[0]["length_m"]
+                    sections.pop(0)
+
+        # ----- DISPLAY STRING DETAILS -----
+        st.markdown("---")
+        st.markdown("**String orientation: Whip End → Core**")
+
         total_length = 0.0
         total_volume = 0.0
         running_depth = 0.0
-
-        st.markdown("**String orientation: Whip End → Core**")
 
         for i, sec in enumerate(sections, start=1):
             id_mm = sec["od_mm"] - 2 * sec["wall_mm"]
@@ -160,13 +182,21 @@ Supports multiple wall thickness sections.
             total_length += sec["length_m"]
             total_volume += volume
 
-            st.write(
-                f"Section {i}: "
-                f"{start_depth:.0f}–{end_depth:.0f} m | "
-                f"OD {sec['od_mm']} mm | "
-                f"Wall {sec['wall_mm']} mm | "
-                f"Volume {volume:.3f} m³"
-            )
+            col_a, col_b = st.columns([6, 1])
+
+            with col_a:
+                st.write(
+                    f"Section {i}: "
+                    f"{start_depth:.0f}–{end_depth:.0f} m | "
+                    f"OD {sec['od_mm']} mm | "
+                    f"Wall {sec['wall_mm']} mm | "
+                    f"Volume {volume:.3f} m³"
+                )
+
+            with col_b:
+                if st.button("❌", key=f"del_{i}"):
+                    sections.pop(i - 1)
+                    st.experimental_rerun()
 
         st.markdown("---")
         st.success(f"Total length: {total_length:.1f} m")
