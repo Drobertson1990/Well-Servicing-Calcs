@@ -39,6 +39,7 @@ def init_state():
     })
 
     st.session_state.setdefault("ct_strings", {})
+
     st.session_state.setdefault("fluid", {
         "base_type": "Fresh Water",
         "base_density": FRESH_WATER_DENSITY,
@@ -66,6 +67,19 @@ def load_job(name):
     for key in job:
         st.session_state[key] = job[key]
 
+# ================= HELPERS =================
+def blended_fluid_density():
+    base_density = st.session_state.fluid["base_density"]
+    total_fraction = 1.0
+    weighted_density = base_density
+
+    for chem in st.session_state.fluid["chemicals"]:
+        frac = chem["fraction"]
+        weighted_density += frac * chem["density"]
+        total_fraction += frac
+
+    return weighted_density / total_fraction
+
 # ================= HEADER =================
 st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
@@ -78,7 +92,7 @@ page = st.sidebar.radio(
         "🛢️ Well / Job",
         "🧵 CT String Builder",
         "🌀 Annular Velocity",
-        "🧊 Volumes",
+        "🧊 Volumes & Displacement",
         "🧪 Fluids",
         "💾 Jobs",
         "📤 Export",
@@ -89,7 +103,7 @@ page = st.sidebar.radio(
 
 # ================= HOME =================
 if page == "🏠 Home":
-    st.success("Geometry-driven calculations ready. Enter data once, reuse everywhere.")
+    st.success("Geometry-driven calculations. Enter data once, reuse everywhere.")
 
 # ================= WELL / JOB =================
 elif page == "🛢️ Well / Job":
@@ -159,7 +173,7 @@ elif page == "🧵 CT String Builder":
             list(st.session_state.ct_strings.keys())
         )
 
-# ================= STEP A — ANNULAR VELOCITY =================
+# ================= ANNULAR VELOCITY =================
 elif page == "🌀 Annular Velocity":
     st.header("Annular Velocity (Depth + Rate Only)")
 
@@ -167,37 +181,22 @@ elif page == "🌀 Annular Velocity":
         st.warning("Define casing and select an active CT string.")
         st.stop()
 
-    depth = st.text_input("Depth (m)")
-    rate = st.text_input("Pump Rate (m³/min)")
+    depth = st.number_input("Depth (m)", min_value=0.0)
+    rate = st.number_input("Pump Rate (m³/min)", min_value=0.0)
 
-    try:
-        depth = float(depth)
-        rate = float(rate)
-    except:
-        st.stop()
+    casing = next((c for c in st.session_state.well["casing"]
+                    if c["from"] <= depth <= c["to"]), None)
 
-    # Determine casing at depth
-    casing = next(
-        (c for c in st.session_state.well["casing"]
-         if c["from"] <= depth <= c["to"]), None
-    )
-
-    if not casing:
-        st.error("No casing defined at this depth.")
-        st.stop()
-
-    # Determine CT OD at depth
     remaining = depth
     ct_od = None
-
     for sec in st.session_state.ct_strings[st.session_state.active_ct]:
         if remaining <= sec["length"]:
             ct_od = sec["od"]
             break
         remaining -= sec["length"]
 
-    if not ct_od:
-        st.error("Depth exceeds CT string length.")
+    if not casing or not ct_od:
+        st.error("Invalid depth.")
         st.stop()
 
     casing_area = math.pi * (casing["id_mm"] / 2000) ** 2
@@ -207,34 +206,28 @@ elif page == "🌀 Annular Velocity":
     velocity = rate / ann_area
     st.success(f"Annular Velocity: {velocity:.2f} m/min")
 
-# ================= VOLUMES =================
-elif page == "🧊 Volumes":
-    st.header("Volumes")
+# ================= VOLUMES & CT DISPLACEMENT =================
+elif page == "🧊 Volumes & Displacement":
+    st.header("Volumes & CT Displacement")
 
     if not st.session_state.active_ct:
         st.warning("Select an active CT string.")
         st.stop()
 
-    depth = st.text_input("Depth (m)")
+    depth = st.number_input("Depth (m)", min_value=0.0)
 
-    try:
-        depth = float(depth)
-    except:
-        st.stop()
-
-    ct_vol = 0
-    ann_vol = 0
+    ct_vol = 0.0
+    ann_vol = 0.0
+    disp_per_m = 0.0
     remaining = depth
 
     for sec in st.session_state.ct_strings[st.session_state.active_ct]:
         id_mm = sec["od"] - 2 * sec["wall"]
         ct_area = math.pi * (id_mm / 2000) ** 2
+        od_area = math.pi * (sec["od"] / 2000) ** 2
 
-        casing = next(
-            (c for c in st.session_state.well["casing"]
-             if c["from"] <= (depth - remaining + 0.01) <= c["to"]), None
-        )
-
+        casing = next((c for c in st.session_state.well["casing"]
+                        if c["from"] <= (depth - remaining + 0.01) <= c["to"]), None)
         if not casing:
             break
 
@@ -242,19 +235,21 @@ elif page == "🧊 Volumes":
         length = min(sec["length"], remaining)
 
         ct_vol += ct_area * length
-        ann_vol += (casing_area - math.pi * ((sec["od"] / 2000) ** 2)) * length
-        remaining -= length
+        ann_vol += (casing_area - od_area) * length
+        disp_per_m = od_area
 
+        remaining -= length
         if remaining <= 0:
             break
 
-    st.success(f"CT Volume: {ct_vol:.3f} m³")
+    st.success(f"CT Internal Volume: {ct_vol:.3f} m³")
     st.success(f"Annular Volume: {ann_vol:.3f} m³")
     st.success(f"Total Circulating Volume: {(ct_vol + ann_vol):.3f} m³")
+    st.info(f"CT Displacement: {disp_per_m:.4f} m³ per meter")
 
 # ================= FLUIDS =================
 elif page == "🧪 Fluids":
-    st.header("Fluids")
+    st.header("Fluids & Chemicals")
 
     base = st.selectbox("Base Fluid", ["Fresh Water", "Produced Water", "Custom"])
 
@@ -265,14 +260,37 @@ elif page == "🧪 Fluids":
     else:
         density = st.number_input("Custom Density (kg/m³)", min_value=800.0)
 
-    st.success(f"Base Density: {density:.1f} kg/m³")
+    st.session_state.fluid["base_type"] = base
+    st.session_state.fluid["base_density"] = density
+
+    st.subheader("Add Chemical")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        chem_name = st.text_input("Name")
+    with col2:
+        chem_density = st.number_input("Density (kg/m³)", min_value=500.0)
+    with col3:
+        chem_frac = st.number_input("Mix Fraction (e.g. 0.05)", min_value=0.0)
+
+    if st.button("Add Chemical"):
+        st.session_state.fluid["chemicals"].append({
+            "name": chem_name,
+            "density": chem_density,
+            "fraction": chem_frac
+        })
+
+    for i, chem in enumerate(st.session_state.fluid["chemicals"], 1):
+        st.write(f"{i}. {chem['name']} | {chem['fraction']} @ {chem['density']} kg/m³")
+
+    blended = blended_fluid_density()
+    st.success(f"Blended Fluid Density: {blended:.1f} kg/m³")
 
 # ================= JOBS =================
 elif page == "💾 Jobs":
     st.header("Jobs")
 
     name = st.text_input("Job Name", st.session_state.well["job_name"])
-
     if st.button("Save Job"):
         save_job(name)
         st.success("Job saved.")
