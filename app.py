@@ -30,30 +30,34 @@ st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
 st.write("Field-ready engineering calculations for oilfield operations.")
 
-# ---------------- SIDEBAR ----------------
-st.sidebar.header("Navigation")
-page = st.sidebar.selectbox(
+# ---------------- SIDEBAR (ICON TABS) ----------------
+st.sidebar.markdown("## Navigation")
+
+page = st.sidebar.radio(
     "Go to",
     [
-        "Home",
-        "Well / Job Setup",
-        "CT String Builder",
-        "Annular Velocity",
-        "Pipe Capacity",
-        "Fluid Volumes",
-        "Settings"
-    ]
+        "🏠 Home",
+        "🛢️ Well / Job",
+        "🧵 CT String Builder",
+        "🧮 Annular Velocity",
+        "📦 Pipe Capacity",
+        "💧 Fluid Volumes",
+        "⚙️ Settings"
+    ],
+    label_visibility="collapsed"
 )
 
 # ---------------- HOME ----------------
-if page == "Home":
+if page == "🏠 Home":
     st.header("Home")
     st.write("1. Set up your well or job")
     st.write("2. Build your CT string")
     st.write("3. Run fast calculations")
+    st.write("")
+    st.write("Designed as a field calculator — fast, repeatable, and reliable.")
 
-# ---------------- WELL / JOB SETUP ----------------
-elif page == "Well / Job Setup":
+# ---------------- WELL / JOB ----------------
+elif page == "🛢️ Well / Job":
     st.header("Well / Job Setup")
 
     st.session_state.well["job_name"] = st.text_input(
@@ -62,7 +66,7 @@ elif page == "Well / Job Setup":
     )
 
     st.session_state.well["depth"] = st.number_input(
-        "Total Depth (m)",
+        f"Total Depth ({st.session_state.settings['length_unit']})",
         min_value=0.0,
         value=st.session_state.well["depth"]
     )
@@ -88,7 +92,7 @@ elif page == "Well / Job Setup":
             st.image(st.session_state.well["schematic"], use_column_width=True)
 
 # ---------------- SETTINGS ----------------
-elif page == "Settings":
+elif page == "⚙️ Settings":
     st.header("Settings")
 
     st.session_state.settings["length_unit"] = st.selectbox(
@@ -114,7 +118,7 @@ elif page == "Settings":
     st.success("Settings saved for this session.")
 
 # ---------------- CT STRING BUILDER ----------------
-elif page == "CT String Builder":
+elif page == "🧵 CT String Builder":
     st.header("CT String Builder")
     st.write("Build CT strings from whip end to core.")
 
@@ -155,36 +159,40 @@ elif page == "CT String Builder":
             total_volume += volume
 
             st.write(
-                "Section", i,
-                "| Length:", sec["length_m"], "m",
-                "| Volume:", round(volume, 3), "m3"
+                f"Section {i} | "
+                f"Length {sec['length_m']} m | "
+                f"Volume {round(volume, 3)} m3"
             )
 
-        st.success("Total Length: " + str(round(total_length, 1)) + " m")
-        st.success("Total Volume: " + str(round(total_volume, 3)) + " m3")
+        st.success(f"Total Length: {round(total_length, 1)} m")
+        st.success(f"Total Volume: {round(total_volume, 3)} m3")
 
 # ---------------- ANNULAR VELOCITY ----------------
-elif page == "Annular Velocity":
+elif page == "🧮 Annular Velocity":
     st.header("Annular Velocity")
 
     casing_id = st.number_input("Casing / Tubing ID (mm)", min_value=0.0)
     ct_od = st.number_input("CT OD (mm)", min_value=0.0)
-    rate = st.number_input("Pump Rate", min_value=0.0)
+    rate = st.number_input(
+        f"Pump Rate ({st.session_state.settings['rate_unit']})",
+        min_value=0.0
+    )
 
     if casing_id > ct_od > 0:
         outer_area = math.pi * (casing_id / 2000) ** 2
         inner_area = math.pi * (ct_od / 2000) ** 2
         annular_area = outer_area - inner_area
         velocity = rate / annular_area
-        st.success("Annular Velocity: " + str(round(velocity, 2)))
+
+        st.success(f"Annular Velocity: {round(velocity, 2)}")
     else:
         st.warning("Casing ID must be greater than CT OD.")
 
 # ---------------- PLACEHOLDERS ----------------
-elif page == "Pipe Capacity":
+elif page == "📦 Pipe Capacity":
     st.header("Pipe Capacity")
     st.info("Coming soon.")
 
-elif page == "Fluid Volumes":
+elif page == "💧 Fluid Volumes":
     st.header("Fluid Volumes")
     st.info("Coming soon.")
