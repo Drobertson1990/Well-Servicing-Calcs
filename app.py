@@ -22,7 +22,8 @@ if "well" not in st.session_state:
         "td": 0.0,
         "liner_top": None,
         "restrictions": [],
-        "fluid_density": 0.0,
+        "fluid_type": "Fresh Water",
+        "fluid_density": 1000.0,
         "schematic": None
     }
 
@@ -34,7 +35,7 @@ st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
 st.write("Field-ready engineering calculations for oilfield operations.")
 
-# ---------------- SIDEBAR (TABS) ----------------
+# ---------------- SIDEBAR NAV ----------------
 st.sidebar.markdown("## Navigation")
 
 page = st.sidebar.radio(
@@ -64,12 +65,14 @@ if page == "🏠 Home":
 elif page == "🛢️ Well / Job":
     st.header("Well / Job Setup")
 
+    # ---- General ----
     st.subheader("General")
     st.session_state.well["job_name"] = st.text_input(
         "Job / Well Name",
         st.session_state.well["job_name"]
     )
 
+    # ---- Depths ----
     st.subheader("Depths")
     col1, col2, col3 = st.columns(3)
 
@@ -86,14 +89,15 @@ elif page == "🛢️ Well / Job":
             "TD (m)", min_value=0.0, value=st.session_state.well["td"]
         )
 
+    # ---- Well Construction ----
     st.subheader("Well Construction")
-
     st.session_state.well["liner_top"] = st.number_input(
         "Liner Top (m) — leave 0 if none",
         min_value=0.0,
         value=st.session_state.well["liner_top"] or 0.0
     )
 
+    # ---- Restrictions ----
     st.subheader("Restrictions")
 
     with st.expander("Add Restriction"):
@@ -120,15 +124,39 @@ elif page == "🛢️ Well / Job":
                 + (f", ID {r['id_mm']} mm" if r['id_mm'] > 0 else "")
             )
 
+    # ---- Fluids ----
     st.subheader("Fluids")
-    st.session_state.well["fluid_density"] = st.number_input(
-        "Fluid Density (kg/m3)",
-        min_value=0.0,
-        value=st.session_state.well["fluid_density"]
+
+    fluid_type = st.selectbox(
+        "Fluid Type",
+        ["Fresh Water", "Produced Water", "Custom"],
+        index=["Fresh Water", "Produced Water", "Custom"].index(
+            st.session_state.well["fluid_type"]
+        )
     )
 
-    st.subheader("Well Schematic")
+    if fluid_type == "Fresh Water":
+        density = 1000.0
+        st.info("Fresh water selected (1000 kg/m³)")
 
+    elif fluid_type == "Produced Water":
+        density = 1050.0
+        st.info("Produced water selected (1050 kg/m³)")
+
+    else:
+        density = st.number_input(
+            "Custom Fluid Density (kg/m³)",
+            min_value=0.0,
+            value=st.session_state.well["fluid_density"]
+        )
+
+    st.session_state.well["fluid_type"] = fluid_type
+    st.session_state.well["fluid_density"] = density
+
+    st.success(f"Active Fluid Density: {density} kg/m³")
+
+    # ---- Well Schematic ----
+    st.subheader("Well Schematic")
     schematic = st.file_uploader(
         "Upload Well Schematic",
         type=["png", "jpg", "jpeg", "pdf"]
@@ -228,7 +256,7 @@ elif page == "🧮 Annular Velocity":
         inner_area = math.pi * (ct_od / 2000) ** 2
         annular_area = outer_area - inner_area
         velocity = rate / annular_area
-        st.success("Annular Velocity: " + str(round(velocity, 2)))
+        st.success(f"Annular Velocity: {round(velocity, 2)}")
     else:
         st.warning("Casing ID must be greater than CT OD.")
 
