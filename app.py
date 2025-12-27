@@ -17,7 +17,11 @@ if "settings" not in st.session_state:
 if "well" not in st.session_state:
     st.session_state.well = {
         "job_name": "",
-        "depth": 0.0,
+        "tvd": 0.0,
+        "kop": 0.0,
+        "td": 0.0,
+        "liner_top": None,
+        "restrictions": [],
         "fluid_density": 0.0,
         "schematic": None
     }
@@ -30,11 +34,11 @@ st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
 st.write("Field-ready engineering calculations for oilfield operations.")
 
-# ---------------- SIDEBAR (ICON TABS) ----------------
+# ---------------- SIDEBAR (TABS) ----------------
 st.sidebar.markdown("## Navigation")
 
 page = st.sidebar.radio(
-    "Go to",
+    "Navigation",
     [
         "🏠 Home",
         "🛢️ Well / Job",
@@ -50,32 +54,80 @@ page = st.sidebar.radio(
 # ---------------- HOME ----------------
 if page == "🏠 Home":
     st.header("Home")
-    st.write("1. Set up your well or job")
-    st.write("2. Build your CT string")
-    st.write("3. Run fast calculations")
+    st.write("1. Define the well")
+    st.write("2. Build the CT string")
+    st.write("3. Run calculations")
     st.write("")
-    st.write("Designed as a field calculator — fast, repeatable, and reliable.")
+    st.write("Designed as a fast, reliable field calculator.")
 
 # ---------------- WELL / JOB ----------------
 elif page == "🛢️ Well / Job":
     st.header("Well / Job Setup")
 
+    st.subheader("General")
     st.session_state.well["job_name"] = st.text_input(
         "Job / Well Name",
         st.session_state.well["job_name"]
     )
 
-    st.session_state.well["depth"] = st.number_input(
-        f"Total Depth ({st.session_state.settings['length_unit']})",
+    st.subheader("Depths")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.session_state.well["tvd"] = st.number_input(
+            "TVD (m)", min_value=0.0, value=st.session_state.well["tvd"]
+        )
+    with col2:
+        st.session_state.well["kop"] = st.number_input(
+            "KOP (m)", min_value=0.0, value=st.session_state.well["kop"]
+        )
+    with col3:
+        st.session_state.well["td"] = st.number_input(
+            "TD (m)", min_value=0.0, value=st.session_state.well["td"]
+        )
+
+    st.subheader("Well Construction")
+
+    st.session_state.well["liner_top"] = st.number_input(
+        "Liner Top (m) — leave 0 if none",
         min_value=0.0,
-        value=st.session_state.well["depth"]
+        value=st.session_state.well["liner_top"] or 0.0
     )
 
+    st.subheader("Restrictions")
+
+    with st.expander("Add Restriction"):
+        r_name = st.text_input("Restriction Name (e.g. Nipple, Packer)")
+        r_depth = st.number_input("Restriction Depth (m)", min_value=0.0)
+        r_id = st.number_input("Restriction ID (mm)", min_value=0.0)
+
+        if st.button("Add Restriction"):
+            if r_name and r_depth > 0:
+                st.session_state.well["restrictions"].append({
+                    "name": r_name,
+                    "depth": r_depth,
+                    "id_mm": r_id
+                })
+                st.success("Restriction added.")
+            else:
+                st.warning("Name and depth required.")
+
+    if st.session_state.well["restrictions"]:
+        st.markdown("**Current Restrictions:**")
+        for i, r in enumerate(st.session_state.well["restrictions"], 1):
+            st.write(
+                f"{i}. {r['name']} @ {r['depth']} m"
+                + (f", ID {r['id_mm']} mm" if r['id_mm'] > 0 else "")
+            )
+
+    st.subheader("Fluids")
     st.session_state.well["fluid_density"] = st.number_input(
         "Fluid Density (kg/m3)",
         min_value=0.0,
         value=st.session_state.well["fluid_density"]
     )
+
+    st.subheader("Well Schematic")
 
     schematic = st.file_uploader(
         "Upload Well Schematic",
@@ -87,7 +139,7 @@ elif page == "🛢️ Well / Job":
 
     if st.session_state.well["schematic"]:
         if st.session_state.well["schematic"].type == "application/pdf":
-            st.info("PDF uploaded (display coming later).")
+            st.info("PDF uploaded (display support coming later).")
         else:
             st.image(st.session_state.well["schematic"], use_column_width=True)
 
@@ -98,24 +150,20 @@ elif page == "⚙️ Settings":
     st.session_state.settings["length_unit"] = st.selectbox(
         "Length Unit", ["m", "ft"]
     )
-
     st.session_state.settings["volume_unit"] = st.selectbox(
         "Volume Unit", ["m3", "bbl", "L"]
     )
-
     st.session_state.settings["rate_unit"] = st.selectbox(
         "Rate Unit", ["m/min", "ft/min", "bbl/min"]
     )
-
     st.session_state.settings["force_unit"] = st.selectbox(
         "Force Unit", ["daN", "lbf"]
     )
-
     st.session_state.settings["theme"] = st.selectbox(
         "Theme", ["Dark", "Light"]
     )
 
-    st.success("Settings saved for this session.")
+    st.success("Settings saved.")
 
 # ---------------- CT STRING BUILDER ----------------
 elif page == "🧵 CT String Builder":
@@ -140,9 +188,8 @@ elif page == "🧵 CT String Builder":
             st.warning("Complete all fields.")
 
     if st.session_state.ct_strings:
-        st.write("Saved CT Strings")
         selected = st.selectbox(
-            "Select String",
+            "Select CT String",
             list(st.session_state.ct_strings.keys())
         )
 
@@ -159,9 +206,10 @@ elif page == "🧵 CT String Builder":
             total_volume += volume
 
             st.write(
-                f"Section {i} | "
-                f"Length {sec['length_m']} m | "
-                f"Volume {round(volume, 3)} m3"
+                f"Section {i}: {sec['length_m']} m | "
+                f"OD {sec['od_mm']} mm | "
+                f"Wall {sec['wall_mm']} mm | "
+                f"Vol {round(volume, 3)} m3"
             )
 
         st.success(f"Total Length: {round(total_length, 1)} m")
@@ -173,18 +221,14 @@ elif page == "🧮 Annular Velocity":
 
     casing_id = st.number_input("Casing / Tubing ID (mm)", min_value=0.0)
     ct_od = st.number_input("CT OD (mm)", min_value=0.0)
-    rate = st.number_input(
-        f"Pump Rate ({st.session_state.settings['rate_unit']})",
-        min_value=0.0
-    )
+    rate = st.number_input("Pump Rate", min_value=0.0)
 
     if casing_id > ct_od > 0:
         outer_area = math.pi * (casing_id / 2000) ** 2
         inner_area = math.pi * (ct_od / 2000) ** 2
         annular_area = outer_area - inner_area
         velocity = rate / annular_area
-
-        st.success(f"Annular Velocity: {round(velocity, 2)}")
+        st.success("Annular Velocity: " + str(round(velocity, 2)))
     else:
         st.warning("Casing ID must be greater than CT OD.")
 
