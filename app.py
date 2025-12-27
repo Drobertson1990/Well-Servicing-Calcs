@@ -6,7 +6,7 @@ from datetime import datetime
 import csv
 import io
 
-# ================== CONFIG ==================
+# ================= CONFIG =================
 st.set_page_config(page_title="Well Servicing Calculator", layout="wide")
 
 JOB_DIR = "jobs"
@@ -25,9 +25,9 @@ CT_OD_PRESETS = {
 FRESH_WATER_DENSITY = 1000.0
 PRODUCED_WATER_DENSITY = 1080.0
 
-# ================== STATE INIT ==================
+# ================= STATE INIT =================
 def init_state():
-    st.session_state.setdefault("settings", {"rate_unit": "m/min", "force_unit": "daN"})
+    st.session_state.setdefault("settings", {"rate_unit": "m³/min"})
     st.session_state.setdefault("active_ct", None)
 
     st.session_state.setdefault("well", {
@@ -47,7 +47,7 @@ def init_state():
 
 init_state()
 
-# ================== JOB IO ==================
+# ================= JOB IO =================
 def save_job(name):
     job = {
         "well": st.session_state.well,
@@ -63,17 +63,14 @@ def load_job(name):
     with open(f"{JOB_DIR}/{name}.json", "r") as f:
         job = json.load(f)
 
-    st.session_state.well = job.get("well", {})
-    st.session_state.ct_strings = job.get("ct_strings", {})
-    st.session_state.fluid = job.get("fluid", {})
-    st.session_state.settings = job.get("settings", {})
-    st.session_state.active_ct = job.get("active_ct")
+    for key in job:
+        st.session_state[key] = job[key]
 
-# ================== HEADER ==================
+# ================= HEADER =================
 st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
 
-# ================== NAV ==================
+# ================= NAV =================
 page = st.sidebar.radio(
     "Navigation",
     [
@@ -90,27 +87,25 @@ page = st.sidebar.radio(
     label_visibility="collapsed"
 )
 
-# ================== HOME ==================
+# ================= HOME =================
 if page == "🏠 Home":
-    st.success("All systems loaded. Geometry-driven calculations ready.")
+    st.success("Geometry-driven calculations ready. Enter data once, reuse everywhere.")
 
-# ================== WELL / JOB ==================
+# ================= WELL / JOB =================
 elif page == "🛢️ Well / Job":
     st.header("Well / Job Setup")
 
-    st.session_state.well["job_name"] = st.text_input(
-        "Job Name", st.session_state.well.get("job_name", "")
-    )
+    st.session_state.well["job_name"] = st.text_input("Job Name", st.session_state.well["job_name"])
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.session_state.well["tvd"] = st.text_input("TVD (m)", st.session_state.well.get("tvd", ""))
+        st.session_state.well["tvd"] = st.text_input("TVD (m)", st.session_state.well["tvd"])
     with col2:
-        st.session_state.well["kop"] = st.text_input("KOP (m)", st.session_state.well.get("kop", ""))
+        st.session_state.well["kop"] = st.text_input("KOP (m)", st.session_state.well["kop"])
     with col3:
-        st.session_state.well["td"] = st.text_input("TD (m)", st.session_state.well.get("td", ""))
+        st.session_state.well["td"] = st.text_input("TD (m)", st.session_state.well["td"])
 
-    st.subheader("Casing / Liner")
+    st.subheader("Casing / Liner Sections")
 
     with st.expander("Add Section"):
         c_from = st.text_input("From (m)")
@@ -118,7 +113,7 @@ elif page == "🛢️ Well / Job":
         c_id = st.text_input("ID (mm)")
         c_type = st.selectbox("Type", ["Casing", "Liner"])
 
-        if st.button("Add Casing"):
+        if st.button("Add Section"):
             try:
                 st.session_state.well["casing"].append({
                     "from": float(c_from),
@@ -128,12 +123,12 @@ elif page == "🛢️ Well / Job":
                 })
                 st.success("Section added.")
             except:
-                st.error("Invalid casing input.")
+                st.error("Invalid casing data.")
 
     for i, c in enumerate(st.session_state.well["casing"], 1):
         st.write(f"{i}. {c['type']} {c['from']}–{c['to']} m | ID {c['id_mm']} mm")
 
-# ================== CT STRING BUILDER ==================
+# ================= CT STRING BUILDER =================
 elif page == "🧵 CT String Builder":
     st.header("CT String Builder (Whip → Core)")
 
@@ -145,7 +140,7 @@ elif page == "🧵 CT String Builder":
     with col2:
         od_label = st.selectbox("OD", list(CT_OD_PRESETS.keys()))
     with col3:
-        wall = st.text_input("Wall (mm)")
+        wall = st.text_input("Wall Thickness (mm)")
 
     if st.button("Add Section"):
         try:
@@ -161,21 +156,15 @@ elif page == "🧵 CT String Builder":
     if st.session_state.ct_strings:
         st.session_state.active_ct = st.selectbox(
             "Active CT String",
-            list(st.session_state.ct_strings.keys()),
-            index=0
+            list(st.session_state.ct_strings.keys())
         )
 
-        running = 0
-        for i, sec in enumerate(st.session_state.ct_strings[st.session_state.active_ct], 1):
-            running += sec["length"]
-            st.write(f"{i}. {sec['length']} m | OD {sec['od']} | Wall {sec['wall']} → {running:.1f} m")
-
-# ================== ANNULAR VELOCITY ==================
+# ================= STEP A — ANNULAR VELOCITY =================
 elif page == "🌀 Annular Velocity":
-    st.header("Annular Velocity")
+    st.header("Annular Velocity (Depth + Rate Only)")
 
     if not st.session_state.active_ct or not st.session_state.well["casing"]:
-        st.warning("Define casing and select an active CT string first.")
+        st.warning("Define casing and select an active CT string.")
         st.stop()
 
     depth = st.text_input("Depth (m)")
@@ -187,15 +176,17 @@ elif page == "🌀 Annular Velocity":
     except:
         st.stop()
 
+    # Determine casing at depth
     casing = next(
         (c for c in st.session_state.well["casing"]
          if c["from"] <= depth <= c["to"]), None
     )
 
     if not casing:
-        st.error("No casing at this depth.")
+        st.error("No casing defined at this depth.")
         st.stop()
 
+    # Determine CT OD at depth
     remaining = depth
     ct_od = None
 
@@ -205,15 +196,18 @@ elif page == "🌀 Annular Velocity":
             break
         remaining -= sec["length"]
 
-    ann_area = (
-        math.pi * ((casing["id_mm"] / 2000) ** 2) -
-        math.pi * ((ct_od / 2000) ** 2)
-    )
+    if not ct_od:
+        st.error("Depth exceeds CT string length.")
+        st.stop()
+
+    casing_area = math.pi * (casing["id_mm"] / 2000) ** 2
+    ct_area = math.pi * (ct_od / 2000) ** 2
+    ann_area = casing_area - ct_area
 
     velocity = rate / ann_area
     st.success(f"Annular Velocity: {velocity:.2f} m/min")
 
-# ================== VOLUMES ==================
+# ================= VOLUMES =================
 elif page == "🧊 Volumes":
     st.header("Volumes")
 
@@ -234,7 +228,7 @@ elif page == "🧊 Volumes":
 
     for sec in st.session_state.ct_strings[st.session_state.active_ct]:
         id_mm = sec["od"] - 2 * sec["wall"]
-        ct_area = math.pi * ((id_mm / 2000) ** 2)
+        ct_area = math.pi * (id_mm / 2000) ** 2
 
         casing = next(
             (c for c in st.session_state.well["casing"]
@@ -244,7 +238,7 @@ elif page == "🧊 Volumes":
         if not casing:
             break
 
-        casing_area = math.pi * ((casing["id_mm"] / 2000) ** 2)
+        casing_area = math.pi * (casing["id_mm"] / 2000) ** 2
         length = min(sec["length"], remaining)
 
         ct_vol += ct_area * length
@@ -258,97 +252,58 @@ elif page == "🧊 Volumes":
     st.success(f"Annular Volume: {ann_vol:.3f} m³")
     st.success(f"Total Circulating Volume: {(ct_vol + ann_vol):.3f} m³")
 
-# ================== FLUIDS ==================
+# ================= FLUIDS =================
 elif page == "🧪 Fluids":
-    st.header("Fluids & Chemicals")
+    st.header("Fluids")
 
-    base_type = st.selectbox(
-        "Base Fluid",
-        ["Fresh Water", "Produced Water", "Custom"],
-        index=["Fresh Water", "Produced Water", "Custom"].index(
-            st.session_state.fluid.get("base_type", "Fresh Water")
-        )
-    )
+    base = st.selectbox("Base Fluid", ["Fresh Water", "Produced Water", "Custom"])
 
-    if base_type == "Fresh Water":
-        base_density = FRESH_WATER_DENSITY
-    elif base_type == "Produced Water":
-        base_density = PRODUCED_WATER_DENSITY
+    if base == "Fresh Water":
+        density = FRESH_WATER_DENSITY
+    elif base == "Produced Water":
+        density = PRODUCED_WATER_DENSITY
     else:
-        base_density = st.number_input("Custom Density (kg/m³)", min_value=800.0)
+        density = st.number_input("Custom Density (kg/m³)", min_value=800.0)
 
-    st.session_state.fluid["base_type"] = base_type
-    st.session_state.fluid["base_density"] = base_density
+    st.success(f"Base Density: {density:.1f} kg/m³")
 
-    st.subheader("Add Chemical")
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        chem_name = st.text_input("Name")
-    with c2:
-        chem_density = st.number_input("Density (kg/m³)", min_value=500.0)
-    with c3:
-        chem_rate = st.number_input("Rate (L/m³)", min_value=0.0)
-
-    if st.button("Add Chemical") and chem_name:
-        st.session_state.fluid["chemicals"].append({
-            "name": chem_name,
-            "density": chem_density,
-            "rate": chem_rate
-        })
-
-    total_rate = sum(c["rate"] for c in st.session_state.fluid["chemicals"])
-    blended_density = (
-        (base_density * (1000 - total_rate)) +
-        sum(c["density"] * c["rate"] for c in st.session_state.fluid["chemicals"])
-    ) / 1000
-
-    st.success(f"Blended Density: {blended_density:.1f} kg/m³")
-
-# ================== JOBS ==================
+# ================= JOBS =================
 elif page == "💾 Jobs":
-    st.header("Job Manager")
+    st.header("Jobs")
 
-    name = st.text_input("Job Name", st.session_state.well.get("job_name", ""))
+    name = st.text_input("Job Name", st.session_state.well["job_name"])
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("💾 Save Job") and name:
-            st.session_state.well["job_name"] = name
-            save_job(name)
-            st.success("Job saved.")
-    with col2:
-        jobs = [f.replace(".json", "") for f in os.listdir(JOB_DIR)]
-        selected = st.selectbox("Load Job", [""] + jobs)
-        if st.button("📂 Load Job") and selected:
-            load_job(selected)
-            st.success("Job loaded.")
+    if st.button("Save Job"):
+        save_job(name)
+        st.success("Job saved.")
 
-# ================== EXPORT ==================
+    jobs = [f.replace(".json", "") for f in os.listdir(JOB_DIR)]
+    selected = st.selectbox("Load Job", [""] + jobs)
+
+    if st.button("Load Job") and selected:
+        load_job(selected)
+        st.success("Job loaded.")
+
+# ================= EXPORT =================
 elif page == "📤 Export":
     st.header("Export Job Summary")
 
-    if not st.session_state.active_ct:
-        st.warning("Select an active CT string.")
-        st.stop()
-
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Job", st.session_state.well.get("job_name", "")])
+    writer.writerow(["Job", st.session_state.well["job_name"]])
     writer.writerow(["Exported", datetime.now().isoformat()])
+
     st.download_button(
-        "⬇️ Download CSV",
+        "Download CSV",
         output.getvalue(),
         file_name="job_summary.csv",
         mime="text/csv"
     )
 
-# ================== SETTINGS ==================
+# ================= SETTINGS =================
 elif page == "⚙️ Settings":
     st.header("Settings")
     st.session_state.settings["rate_unit"] = st.selectbox(
-        "Rate Unit", ["m/min", "ft/min", "bbl/min"]
-    )
-    st.session_state.settings["force_unit"] = st.selectbox(
-        "Force Unit", ["daN", "lbf"]
+        "Pump Rate Unit",
+        ["m³/min", "bbl/min"]
     )
