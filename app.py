@@ -12,6 +12,8 @@ st.set_page_config(page_title="Well Servicing Calculator", layout="wide")
 JOB_DIR = "jobs"
 os.makedirs(JOB_DIR, exist_ok=True)
 
+G = 9.80665  # gravity m/s²
+
 CT_OD_PRESETS = {
     '1"': 25.4,
     '1¼"': 31.75,
@@ -80,6 +82,13 @@ def blended_fluid_density():
 
     return weighted_density / total_fraction
 
+def hydrostatic_pressure(density, tvd):
+    pressure_pa = density * G * tvd
+    pressure_kpa = pressure_pa / 1000
+    pressure_psi = pressure_kpa * 0.145038
+    gradient = pressure_kpa / tvd if tvd > 0 else 0
+    return pressure_kpa, pressure_psi, gradient
+
 # ================= HEADER =================
 st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
@@ -94,6 +103,7 @@ page = st.sidebar.radio(
         "🌀 Annular Velocity",
         "🧊 Volumes & Displacement",
         "🧪 Fluids",
+        "📉 Hydrostatic Pressure",
         "💾 Jobs",
         "📤 Export",
         "⚙️ Settings"
@@ -109,7 +119,9 @@ if page == "🏠 Home":
 elif page == "🛢️ Well / Job":
     st.header("Well / Job Setup")
 
-    st.session_state.well["job_name"] = st.text_input("Job Name", st.session_state.well["job_name"])
+    st.session_state.well["job_name"] = st.text_input(
+        "Job Name", st.session_state.well["job_name"]
+    )
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -118,29 +130,6 @@ elif page == "🛢️ Well / Job":
         st.session_state.well["kop"] = st.text_input("KOP (m)", st.session_state.well["kop"])
     with col3:
         st.session_state.well["td"] = st.text_input("TD (m)", st.session_state.well["td"])
-
-    st.subheader("Casing / Liner Sections")
-
-    with st.expander("Add Section"):
-        c_from = st.text_input("From (m)")
-        c_to = st.text_input("To (m)")
-        c_id = st.text_input("ID (mm)")
-        c_type = st.selectbox("Type", ["Casing", "Liner"])
-
-        if st.button("Add Section"):
-            try:
-                st.session_state.well["casing"].append({
-                    "from": float(c_from),
-                    "to": float(c_to),
-                    "id_mm": float(c_id),
-                    "type": c_type
-                })
-                st.success("Section added.")
-            except:
-                st.error("Invalid casing data.")
-
-    for i, c in enumerate(st.session_state.well["casing"], 1):
-        st.write(f"{i}. {c['type']} {c['from']}–{c['to']} m | ID {c['id_mm']} mm")
 
 # ================= CT STRING BUILDER =================
 elif page == "🧵 CT String Builder":
@@ -172,80 +161,6 @@ elif page == "🧵 CT String Builder":
             "Active CT String",
             list(st.session_state.ct_strings.keys())
         )
-
-# ================= ANNULAR VELOCITY =================
-elif page == "🌀 Annular Velocity":
-    st.header("Annular Velocity (Depth + Rate Only)")
-
-    if not st.session_state.active_ct or not st.session_state.well["casing"]:
-        st.warning("Define casing and select an active CT string.")
-        st.stop()
-
-    depth = st.number_input("Depth (m)", min_value=0.0)
-    rate = st.number_input("Pump Rate (m³/min)", min_value=0.0)
-
-    casing = next((c for c in st.session_state.well["casing"]
-                    if c["from"] <= depth <= c["to"]), None)
-
-    remaining = depth
-    ct_od = None
-    for sec in st.session_state.ct_strings[st.session_state.active_ct]:
-        if remaining <= sec["length"]:
-            ct_od = sec["od"]
-            break
-        remaining -= sec["length"]
-
-    if not casing or not ct_od:
-        st.error("Invalid depth.")
-        st.stop()
-
-    casing_area = math.pi * (casing["id_mm"] / 2000) ** 2
-    ct_area = math.pi * (ct_od / 2000) ** 2
-    ann_area = casing_area - ct_area
-
-    velocity = rate / ann_area
-    st.success(f"Annular Velocity: {velocity:.2f} m/min")
-
-# ================= VOLUMES & CT DISPLACEMENT =================
-elif page == "🧊 Volumes & Displacement":
-    st.header("Volumes & CT Displacement")
-
-    if not st.session_state.active_ct:
-        st.warning("Select an active CT string.")
-        st.stop()
-
-    depth = st.number_input("Depth (m)", min_value=0.0)
-
-    ct_vol = 0.0
-    ann_vol = 0.0
-    disp_per_m = 0.0
-    remaining = depth
-
-    for sec in st.session_state.ct_strings[st.session_state.active_ct]:
-        id_mm = sec["od"] - 2 * sec["wall"]
-        ct_area = math.pi * (id_mm / 2000) ** 2
-        od_area = math.pi * (sec["od"] / 2000) ** 2
-
-        casing = next((c for c in st.session_state.well["casing"]
-                        if c["from"] <= (depth - remaining + 0.01) <= c["to"]), None)
-        if not casing:
-            break
-
-        casing_area = math.pi * (casing["id_mm"] / 2000) ** 2
-        length = min(sec["length"], remaining)
-
-        ct_vol += ct_area * length
-        ann_vol += (casing_area - od_area) * length
-        disp_per_m = od_area
-
-        remaining -= length
-        if remaining <= 0:
-            break
-
-    st.success(f"CT Internal Volume: {ct_vol:.3f} m³")
-    st.success(f"Annular Volume: {ann_vol:.3f} m³")
-    st.success(f"Total Circulating Volume: {(ct_vol + ann_vol):.3f} m³")
-    st.info(f"CT Displacement: {disp_per_m:.4f} m³ per meter")
 
 # ================= FLUIDS =================
 elif page == "🧪 Fluids":
@@ -286,6 +201,25 @@ elif page == "🧪 Fluids":
     blended = blended_fluid_density()
     st.success(f"Blended Fluid Density: {blended:.1f} kg/m³")
 
+# ================= HYDROSTATIC PRESSURE =================
+elif page == "📉 Hydrostatic Pressure":
+    st.header("Hydrostatic Pressure")
+
+    blended = blended_fluid_density()
+
+    default_tvd = (
+        float(st.session_state.well["tvd"])
+        if st.session_state.well["tvd"] else 0.0
+    )
+
+    tvd = st.number_input("Depth (TVD, m)", value=default_tvd, min_value=0.0)
+
+    p_kpa, p_psi, grad = hydrostatic_pressure(blended, tvd)
+
+    st.success(f"Hydrostatic Pressure: {p_kpa:,.0f} kPa")
+    st.success(f"Hydrostatic Pressure: {p_psi:,.0f} psi")
+    st.info(f"Pressure Gradient: {grad:.2f} kPa/m")
+
 # ================= JOBS =================
 elif page == "💾 Jobs":
     st.header("Jobs")
@@ -310,6 +244,7 @@ elif page == "📤 Export":
     writer = csv.writer(output)
     writer.writerow(["Job", st.session_state.well["job_name"]])
     writer.writerow(["Exported", datetime.now().isoformat()])
+    writer.writerow(["Fluid Density (kg/m³)", blended_fluid_density()])
 
     st.download_button(
         "Download CSV",
