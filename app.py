@@ -49,6 +49,7 @@ page = st.sidebar.radio(
         "🛢️ Well / Job",
         "🧵 CT String Builder",
         "🌀 Annular Velocity",
+        "🧊 Volumes",
         "⚙️ Settings",
     ],
     label_visibility="collapsed",
@@ -60,7 +61,8 @@ if page == "🏠 Home":
     st.write("• Define well geometry")
     st.write("• Build CT string")
     st.write("• Depth-based annular velocity")
-    st.success("Clean inputs. No default zeros.")
+    st.write("• Depth-based volumes")
+    st.success("All volumes are geometry-driven.")
 
 # ---------------- WELL / JOB ----------------
 elif page == "🛢️ Well / Job":
@@ -107,20 +109,6 @@ elif page == "🛢️ Well / Job":
         st.write(
             f"{c['type']} | {c['from']}–{c['to']} m | ID {c['id_mm']} mm"
         )
-
-    st.subheader("Fluid")
-    fluid = st.selectbox("Fluid Type", ["Fresh Water", "Produced Water", "Custom"])
-
-    if fluid == "Fresh Water":
-        st.session_state.well["fluid_density"] = 1000
-    elif fluid == "Produced Water":
-        st.session_state.well["fluid_density"] = 1050
-    else:
-        density = st.text_input("Density (kg/m³)")
-        try:
-            st.session_state.well["fluid_density"] = float(density)
-        except:
-            pass
 
 # ---------------- CT STRING BUILDER ----------------
 elif page == "🧵 CT String Builder":
@@ -183,7 +171,9 @@ elif page == "🌀 Annular Velocity":
 
     ct_od = None
     remaining = depth
-    for sec in st.session_state.ct_strings[list(st.session_state.ct_strings.keys())[0]]:
+    ct_string = list(st.session_state.ct_strings.values())[0]
+
+    for sec in ct_string:
         if remaining <= sec["length"]:
             ct_od = sec["od"]
             break
@@ -199,8 +189,76 @@ elif page == "🌀 Annular Velocity":
     )
 
     velocity = rate / annular_area
-
     st.success(f"Annular Velocity: {velocity:.2f} m/min")
+
+# ---------------- VOLUMES ----------------
+elif page == "🧊 Volumes":
+    st.header("Volumes (Depth-Based)")
+
+    depth = st.text_input("Depth (m)")
+
+    try:
+        depth = float(depth)
+    except:
+        st.warning("Enter depth.")
+        st.stop()
+
+    if not st.session_state.ct_strings or not st.session_state.well["casing"]:
+        st.error("CT string and casing must be defined.")
+        st.stop()
+
+    ct_string = list(st.session_state.ct_strings.values())[0]
+
+    # ---- CT INTERNAL VOLUME ----
+    ct_vol = 0.0
+    remaining = depth
+
+    for sec in ct_string:
+        id_mm = sec["od"] - 2 * sec["wall"]
+        area = math.pi * ((id_mm / 2000) ** 2)
+
+        length = min(sec["length"], remaining)
+        ct_vol += area * length
+        remaining -= length
+
+        if remaining <= 0:
+            break
+
+    # ---- ANNULAR VOLUME ----
+    ann_vol = 0.0
+    remaining = depth
+
+    for sec in ct_string:
+        ct_od = sec["od"]
+        sec_len = min(sec["length"], remaining)
+
+        casing = next(
+            (c for c in st.session_state.well["casing"]
+             if c["from"] <= (depth - remaining + 0.01) <= c["to"]), None
+        )
+
+        if not casing:
+            st.error("Missing casing for annular volume.")
+            st.stop()
+
+        casing_area = math.pi * ((casing["id_mm"] / 2000) ** 2)
+        ct_area = math.pi * ((ct_od / 2000) ** 2)
+
+        ann_vol += (casing_area - ct_area) * sec_len
+        remaining -= sec_len
+
+        if remaining <= 0:
+            break
+
+    st.subheader("Results")
+
+    st.write(f"CT Internal Volume: {ct_vol:.3f} m³")
+    st.write(f"Annular Volume: {ann_vol:.3f} m³")
+    st.success(f"Total Circulating Volume: {(ct_vol + ann_vol):.3f} m³")
+
+    st.caption("Conversions")
+    st.write(f"CT Volume: {ct_vol * 6.2898:.2f} bbl | {ct_vol * 1000:.0f} L")
+    st.write(f"Annular Volume: {ann_vol * 6.2898:.2f} bbl | {ann_vol * 1000:.0f} L")
 
 # ---------------- SETTINGS ----------------
 elif page == "⚙️ Settings":
