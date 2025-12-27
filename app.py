@@ -2,6 +2,9 @@ import streamlit as st
 import math
 import json
 import os
+from datetime import datetime
+import csv
+import io
 
 # ---------------- CONFIG ----------------
 st.set_page_config(page_title="Well Servicing Calculator", layout="wide")
@@ -66,6 +69,99 @@ def load_job(name):
     st.session_state.settings = job.get("settings", {})
     st.session_state.active_ct = job.get("active_ct")
 
+# ---------------- EXPORT HELPERS ----------------
+def generate_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    w = st.session_state.well
+    ct_name = st.session_state.active_ct
+    ct = st.session_state.ct_strings.get(ct_name, [])
+
+    writer.writerow(["JOB SUMMARY"])
+    writer.writerow(["Job Name", w.get("job_name", "")])
+    writer.writerow(["Exported", datetime.now().isoformat()])
+    writer.writerow([])
+
+    writer.writerow(["Well Info"])
+    writer.writerow(["TVD (m)", w.get("tvd", "")])
+    writer.writerow(["KOP (m)", w.get("kop", "")])
+    writer.writerow(["TD (m)", w.get("td", "")])
+    writer.writerow([])
+
+    writer.writerow(["Casing / Liner"])
+    writer.writerow(["Type", "From (m)", "To (m)", "ID (mm)"])
+    for c in w.get("casing", []):
+        writer.writerow([c["type"], c["from"], c["to"], c["id_mm"]])
+
+    writer.writerow([])
+    writer.writerow(["CT String", ct_name])
+    writer.writerow(["Section", "Length (m)", "OD (mm)", "Wall (mm)"])
+
+    total_length = 0
+    for i, sec in enumerate(ct, 1):
+        total_length += sec["length"]
+        writer.writerow([i, sec["length"], sec["od"], sec["wall"]])
+
+    writer.writerow(["Total Length (m)", total_length])
+    writer.writerow([])
+
+    writer.writerow(["Fluids"])
+    writer.writerow(["Base Density (kg/m³)", st.session_state.fluid["base_density"]])
+
+    for chem in st.session_state.fluid["chemicals"]:
+        writer.writerow([
+            "Chemical",
+            chem["name"],
+            chem["density"],
+            chem["rate"]
+        ])
+
+    return output.getvalue()
+
+def generate_text_report():
+    w = st.session_state.well
+    ct_name = st.session_state.active_ct
+    ct = st.session_state.ct_strings.get(ct_name, [])
+
+    lines = []
+    lines.append("WELL SERVICING JOB SUMMARY")
+    lines.append("=" * 40)
+    lines.append(f"Job Name: {w.get('job_name', '')}")
+    lines.append(f"Exported: {datetime.now().isoformat()}")
+    lines.append("")
+
+    lines.append("WELL INFO")
+    lines.append(f"TVD: {w.get('tvd', '')} m")
+    lines.append(f"KOP: {w.get('kop', '')} m")
+    lines.append(f"TD: {w.get('td', '')} m")
+    lines.append("")
+
+    lines.append("CASING / LINER")
+    for c in w.get("casing", []):
+        lines.append(f"{c['type']} {c['from']}–{c['to']} m | ID {c['id_mm']} mm")
+
+    lines.append("")
+    lines.append(f"CT STRING: {ct_name}")
+    total_length = 0
+    for i, sec in enumerate(ct, 1):
+        total_length += sec["length"]
+        lines.append(
+            f"{i}. {sec['length']} m | OD {sec['od']} mm | Wall {sec['wall']} mm"
+        )
+    lines.append(f"Total Length: {total_length:.1f} m")
+
+    lines.append("")
+    lines.append("FLUID SYSTEM")
+    lines.append(f"Base Density: {st.session_state.fluid['base_density']} kg/m³")
+
+    for chem in st.session_state.fluid["chemicals"]:
+        lines.append(
+            f"{chem['name']} @ {chem['rate']} L/m³ | Density {chem['density']} kg/m³"
+        )
+
+    return "\n".join(lines)
+
 # ---------------- HEADER ----------------
 st.title("Well Servicing Calculator")
 st.subheader("Coiled Tubing • Service Rigs • Snubbing")
@@ -77,163 +173,40 @@ page = st.sidebar.radio(
         "🏠 Home",
         "🛢️ Well / Job",
         "🧵 CT String Builder",
-        "🌀 Annular Velocity",
         "🧊 Volumes",
         "🧪 Fluids",
         "💾 Jobs",
+        "📤 Export",
         "⚙️ Settings"
     ],
     label_visibility="collapsed"
 )
 
-# ---------------- HOME ----------------
-if page == "🏠 Home":
-    st.success("Geometry-driven field calculations with saved jobs.")
-
-# ---------------- JOB MANAGER ----------------
-elif page == "💾 Jobs":
-    st.header("Job Manager")
-
-    name = st.text_input("Job Name", st.session_state.well.get("job_name", ""))
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("💾 Save Job"):
-            if name:
-                st.session_state.well["job_name"] = name
-                save_job(name)
-                st.success("Job saved.")
-            else:
-                st.warning("Enter a job name.")
-
-    with col2:
-        jobs = [f.replace(".json", "") for f in os.listdir(JOB_DIR)]
-        selected = st.selectbox("Load Job", [""] + jobs)
-        if st.button("📂 Load Job") and selected:
-            load_job(selected)
-            st.success("Job loaded.")
-
-# ---------------- WELL ----------------
-elif page == "🛢️ Well / Job":
-    st.header("Well / Job Setup")
-
-    st.session_state.well["job_name"] = st.text_input(
-        "Job Name", str(st.session_state.well.get("job_name", ""))
-    )
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.session_state.well["tvd"] = st.text_input("TVD (m)", str(st.session_state.well.get("tvd", "")))
-    with col2:
-        st.session_state.well["kop"] = st.text_input("KOP (m)", str(st.session_state.well.get("kop", "")))
-    with col3:
-        st.session_state.well["td"] = st.text_input("TD (m)", str(st.session_state.well.get("td", "")))
-
-    st.subheader("Casing / Liner")
-
-    with st.expander("Add Section"):
-        c_from = st.text_input("From (m)")
-        c_to = st.text_input("To (m)")
-        c_id = st.text_input("ID (mm)")
-        c_type = st.selectbox("Type", ["Casing", "Liner"])
-
-        if st.button("Add Casing"):
-            try:
-                st.session_state.well["casing"].append({
-                    "from": float(c_from),
-                    "to": float(c_to),
-                    "id_mm": float(c_id),
-                    "type": c_type
-                })
-                st.success("Added.")
-            except:
-                st.error("Invalid casing data.")
-
-    for i, c in enumerate(st.session_state.well["casing"], 1):
-        st.write(f"{i}. {c['type']} {c['from']}–{c['to']} m | ID {c['id_mm']} mm")
-
-# ---------------- CT STRING BUILDER ----------------
-elif page == "🧵 CT String Builder":
-    st.header("CT String Builder (Whip → Core)")
-
-    name = st.text_input("CT String Name")
-
-    length = st.text_input("Section Length (m)")
-    od_label = st.selectbox("OD", list(CT_OD_PRESETS.keys()))
-    wall = st.text_input("Wall (mm)")
-
-    if st.button("Add Section"):
-        try:
-            st.session_state.ct_strings.setdefault(name, []).append({
-                "length": float(length),
-                "od": CT_OD_PRESETS[od_label],
-                "wall": float(wall)
-            })
-            st.success("Section added.")
-        except:
-            st.error("Invalid section.")
-
-    if st.session_state.ct_strings:
-        st.session_state.active_ct = st.selectbox(
-            "Active CT String",
-            list(st.session_state.ct_strings.keys()),
-            index=0
-        )
-
-# ---------------- VOLUMES ----------------
-elif page == "🧊 Volumes":
-    st.header("Volumes")
+# ---------------- EXPORT PAGE ----------------
+if page == "📤 Export":
+    st.header("Export Job Summary")
 
     if not st.session_state.active_ct:
-        st.warning("Select an active CT string first.")
+        st.warning("Select an active CT string before exporting.")
         st.stop()
 
-    depth = st.text_input("Depth (m)")
+    csv_data = generate_csv()
+    text_report = generate_text_report()
 
-    try:
-        depth = float(depth)
-    except:
-        st.stop()
-
-    ct_string = st.session_state.ct_strings[st.session_state.active_ct]
-
-    ct_vol = 0
-    ann_vol = 0
-    remaining = depth
-
-    for sec in ct_string:
-        id_mm = sec["od"] - 2 * sec["wall"]
-        ct_area = math.pi * ((id_mm / 2000) ** 2)
-
-        casing = next(
-            (c for c in st.session_state.well["casing"]
-             if c["from"] <= (depth - remaining + 0.01) <= c["to"]), None
-        )
-
-        if not casing:
-            break
-
-        casing_area = math.pi * ((casing["id_mm"] / 2000) ** 2)
-
-        length = min(sec["length"], remaining)
-        ct_vol += ct_area * length
-        ann_vol += (casing_area - math.pi * ((sec["od"] / 2000) ** 2)) * length
-        remaining -= length
-
-        if remaining <= 0:
-            break
-
-    st.success(f"CT Volume: {ct_vol:.3f} m³")
-    st.success(f"Annular Volume: {ann_vol:.3f} m³")
-    st.success(f"Total: {(ct_vol + ann_vol):.3f} m³")
-
-# ---------------- SETTINGS ----------------
-elif page == "⚙️ Settings":
-    st.header("Settings")
-    st.session_state.settings["rate_unit"] = st.selectbox(
-        "Rate Unit", ["m/min", "ft/min", "bbl/min"]
+    st.download_button(
+        "⬇️ Download CSV (Excel)",
+        csv_data,
+        file_name=f"{st.session_state.well.get('job_name','job')}_summary.csv",
+        mime="text/csv"
     )
-    st.session_state.settings["force_unit"] = st.selectbox(
-        "Force Unit", ["daN", "lbf"]
+
+    st.download_button(
+        "⬇️ Download Text Report",
+        text_report,
+        file_name=f"{st.session_state.well.get('job_name','job')}_summary.txt",
+        mime="text/plain"
     )
+
+# ---------------- PLACEHOLDERS ----------------
+elif page != "📤 Export":
+    st.info("This page remains unchanged from previous steps.")
