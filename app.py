@@ -58,7 +58,7 @@ def calc_displacement(sections):
     for s in sections:
         od_m = s["od_mm"] / 1000
         id_m = (s["od_mm"] - 2 * s["wall_mm"]) / 1000
-        area = math.pi * ((od_m/2)**2 - (id_m/2)**2)
+        area = math.pi * ((od_m / 2) ** 2 - (id_m / 2) ** 2)
         disp += area * s["length_m"]
     return disp
 
@@ -76,7 +76,7 @@ def calc_ratings_placeholder():
 # HEADER
 # =========================
 st.title("Well Servicing Calculator")
-st.subheader("Phase 2 – CT Strings + Well / Job Setup")
+st.subheader("Phase 1–2 | CT Strings + Well / Job")
 
 # =========================
 # SIDEBAR NAV
@@ -104,7 +104,7 @@ if page == "🏠 Home":
         st.info(f"Well TD: {geo['TD_m']} m")
 
 # =========================
-# CT STRINGS (PHASE 1 – UNCHANGED)
+# CT STRINGS (UNCHANGED)
 # =========================
 if page == "🧵 CT Strings":
     st.header("CT String Builder")
@@ -153,9 +153,11 @@ if page == "🧵 CT Strings":
         sections = st.session_state.job["ct_strings"][st.session_state.job["active_ct"]]["sections"]
 
         if sections:
-            st.subheader("Sections")
+            st.subheader("Sections (Whip → Core)")
             for i, s in enumerate(sections):
-                st.write(f"{i+1}. {s['length_m']} m | OD {s['od_mm']} mm | Wall {s['wall_mm']} mm")
+                st.write(
+                    f"{i+1}. {s['length_m']} m | OD {s['od_mm']} mm | Wall {s['wall_mm']} mm"
+                )
 
             st.subheader("Trim Whip End")
             trim_len = st.number_input("Trim length (m)", min_value=0.0)
@@ -179,37 +181,59 @@ if page == "🧵 CT Strings":
             st.metric("Displacement (m³)", f"{calc_displacement(sections):.3f}")
 
 # =========================
-# WELL / JOB SETUP (PHASE 2)
+# WELL / JOB SETUP (CORRECTED)
 # =========================
 if page == "🛢️ Well / Job":
     st.header("Well / Job Setup")
 
+    # WELL GEOMETRY
     st.subheader("Well Geometry")
     geo = st.session_state.job["well"]["geometry"]
 
-    geo["TVD_m"] = st.number_input("TVD (m)", value=geo["TVD_m"])
-    geo["KOP_m"] = st.number_input("KOP (m)", value=geo["KOP_m"])
-    geo["TD_m"] = st.number_input("TD (m)", value=geo["TD_m"])
+    g1, g2, g3 = st.columns(3)
+    with g1:
+        geo["TVD_m"] = st.number_input("TVD (m)", value=geo["TVD_m"])
+    with g2:
+        geo["KOP_m"] = st.number_input("KOP (m)", value=geo["KOP_m"])
+    with g3:
+        geo["TD_m"] = st.number_input("TD (m)", value=geo["TD_m"])
 
     st.markdown("---")
+
+    # CASING / LINER
     st.subheader("Casing / Liner")
 
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1:
-        casing_id = st.number_input("Casing ID (mm)", min_value=0.0)
+        casing_name = st.text_input("Section name (optional)")
     with c2:
+        casing_id = st.number_input("ID (mm)", min_value=0.0)
+    with c3:
         shoe_depth = st.number_input("Shoe depth (m)", min_value=0.0)
 
-    if st.button("Add Casing Section"):
+    if st.button("Add Casing / Liner"):
         if casing_id > 0 and shoe_depth > 0:
-            st.session_state.job["well"]["casing"].append(
-                {"id_mm": casing_id, "shoe_depth_m": shoe_depth}
-            )
+            st.session_state.job["well"]["casing"].append({
+                "name": casing_name,
+                "id_mm": casing_id,
+                "shoe_depth_m": shoe_depth
+            })
 
-    for i, c in enumerate(st.session_state.job["well"]["casing"]):
-        st.write(f"{i+1}. ID {c['id_mm']} mm @ {c['shoe_depth_m']} m")
+    if st.session_state.job["well"]["casing"]:
+        h1, h2, h3 = st.columns(3)
+        h1.markdown("**Name**")
+        h2.markdown("**ID (mm)**")
+        h3.markdown("**Shoe depth (m)**")
+
+        for c in st.session_state.job["well"]["casing"]:
+            r1, r2, r3 = st.columns(3)
+            r1.write(c["name"] if c["name"] else "—")
+            r2.write(c["id_mm"])
+            r3.write(c["shoe_depth_m"])
 
     st.markdown("---")
+
+    # RESTRICTIONS
     st.subheader("Restrictions")
 
     r1, r2, r3 = st.columns(3)
@@ -222,16 +246,28 @@ if page == "🛢️ Well / Job":
 
     if st.button("Add Restriction"):
         if r_name and r_id > 0 and r_depth > 0:
-            st.session_state.job["well"]["restrictions"].append(
-                {"name": r_name, "id_mm": r_id, "depth_m": r_depth}
-            )
+            st.session_state.job["well"]["restrictions"].append({
+                "name": r_name,
+                "id_mm": r_id,
+                "depth_m": r_depth
+            })
 
-    for r in st.session_state.job["well"]["restrictions"]:
-        st.write(f"{r['name']} – ID {r['id_mm']} mm @ {r['depth_m']} m")
+    if st.session_state.job["well"]["restrictions"]:
+        h1, h2, h3 = st.columns(3)
+        h1.markdown("**Name**")
+        h2.markdown("**ID (mm)**")
+        h3.markdown("**Depth (m)**")
+
+        for r in st.session_state.job["well"]["restrictions"]:
+            r1, r2, r3 = st.columns(3)
+            r1.write(r["name"])
+            r2.write(r["id_mm"])
+            r3.write(r["depth_m"])
 
     st.markdown("---")
-    st.subheader("Well Schematic")
 
+    # SCHEMATIC
+    st.subheader("Well Schematic")
     schematic = st.file_uploader("Upload schematic", type=["png", "jpg", "jpeg", "pdf"])
     if schematic:
         st.session_state.job["well"]["schematic"] = schematic
