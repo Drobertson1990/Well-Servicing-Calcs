@@ -15,7 +15,17 @@ st.set_page_config(
 if "job" not in st.session_state:
     st.session_state.job = {
         "ct_strings": {},
-        "active_ct": None
+        "active_ct": None,
+        "well": {
+            "geometry": {
+                "TVD_m": None,
+                "KOP_m": None,
+                "TD_m": None
+            },
+            "casing": [],
+            "restrictions": [],
+            "schematic": None
+        }
     }
 
 # =========================
@@ -31,10 +41,8 @@ CT_OD_OPTIONS = {
     '2.875" – 73.0 mm': 73.0
 }
 
-STEEL_DENSITY = 7850  # kg/m3
-
 # =========================
-# HELPER FUNCTIONS
+# HELPER FUNCTIONS (CT)
 # =========================
 def calc_internal_volume(sections):
     vol = 0
@@ -68,14 +76,7 @@ def calc_ratings_placeholder():
 # HEADER
 # =========================
 st.title("Well Servicing Calculator")
-st.subheader("Phase 1 – CT String Builder (Locked Foundation)")
-
-st.markdown(
-    """
-This phase establishes the **core CT string engine**.
-All downstream calculations will reference this data.
-"""
-)
+st.subheader("Phase 2 – CT Strings + Well / Job Setup")
 
 # =========================
 # SIDEBAR NAV
@@ -84,7 +85,7 @@ st.sidebar.header("Navigation")
 
 page = st.sidebar.radio(
     "Go to",
-    ["🏠 Home", "🧵 CT Strings"]
+    ["🏠 Home", "🧵 CT Strings", "🛢️ Well / Job"]
 )
 
 # =========================
@@ -92,37 +93,26 @@ page = st.sidebar.radio(
 # =========================
 if page == "🏠 Home":
     st.header("Home")
-    st.write(
-        """
-        This application is built around **job-centric data**.
-        
-        Phase 1 focuses on:
-        - Building
-        - Editing
-        - Selecting
-        coiled tubing strings.
-        """
-    )
 
     if st.session_state.job["active_ct"]:
         st.success(f"Active CT String: {st.session_state.job['active_ct']}")
     else:
         st.warning("No active CT string selected.")
 
+    geo = st.session_state.job["well"]["geometry"]
+    if geo["TD_m"]:
+        st.info(f"Well TD: {geo['TD_m']} m")
+
 # =========================
-# CT STRING BUILDER
+# CT STRINGS (PHASE 1 – UNCHANGED)
 # =========================
 if page == "🧵 CT Strings":
     st.header("CT String Builder")
 
-    # -------------------------
-    # CREATE / SELECT STRING
-    # -------------------------
     col1, col2 = st.columns(2)
 
     with col1:
         new_string = st.text_input("Create new CT string")
-
         if st.button("Create CT String"):
             if new_string:
                 st.session_state.job["ct_strings"][new_string] = {
@@ -130,8 +120,6 @@ if page == "🧵 CT Strings":
                     "ratings": calc_ratings_placeholder()
                 }
                 st.session_state.job["active_ct"] = new_string
-            else:
-                st.warning("Enter a string name.")
 
     with col2:
         if st.session_state.job["ct_strings"]:
@@ -144,94 +132,112 @@ if page == "🧵 CT Strings":
             )
             st.session_state.job["active_ct"] = active
 
-    # -------------------------
-    # ADD SECTION
-    # -------------------------
     if st.session_state.job["active_ct"]:
-        st.markdown("---")
         st.subheader("Add Section (Whip → Core)")
-
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            length_m = st.number_input("Length (m)", min_value=0.0, step=1.0)
-
+            length_m = st.number_input("Length (m)", min_value=0.0)
         with c2:
             od_label = st.selectbox("OD", list(CT_OD_OPTIONS.keys()))
             od_mm = CT_OD_OPTIONS[od_label]
-
         with c3:
-            wall_mm = st.number_input("Wall thickness (mm)", min_value=0.0, step=0.01)
+            wall_mm = st.number_input("Wall thickness (mm)", min_value=0.0)
 
         if st.button("Add Section"):
             if length_m > 0 and wall_mm > 0:
                 st.session_state.job["ct_strings"][st.session_state.job["active_ct"]]["sections"].append(
-                    {
-                        "length_m": length_m,
-                        "od_mm": od_mm,
-                        "wall_mm": wall_mm
-                    }
+                    {"length_m": length_m, "od_mm": od_mm, "wall_mm": wall_mm}
                 )
-            else:
-                st.warning("All values must be greater than zero.")
 
-        # -------------------------
-        # EDIT / VIEW SECTIONS
-        # -------------------------
         sections = st.session_state.job["ct_strings"][st.session_state.job["active_ct"]]["sections"]
 
         if sections:
-            st.markdown("---")
-            st.subheader("CT Sections (Whip → Core)")
-
+            st.subheader("Sections")
             for i, s in enumerate(sections):
-                st.write(
-                    f"Section {i+1}: "
-                    f"{s['length_m']} m | "
-                    f"OD {s['od_mm']} mm | "
-                    f"Wall {s['wall_mm']} mm"
-                )
+                st.write(f"{i+1}. {s['length_m']} m | OD {s['od_mm']} mm | Wall {s['wall_mm']} mm")
 
-            # -------------------------
-            # TRIM WHIP END
-            # -------------------------
-            st.markdown("---")
             st.subheader("Trim Whip End")
-
-            trim_len = st.number_input("Trim length (m)", min_value=0.0, step=1.0)
-
+            trim_len = st.number_input("Trim length (m)", min_value=0.0)
             if st.button("Trim"):
-                if trim_len > 0:
-                    remaining = trim_len
-                    new_sections = []
+                remaining = trim_len
+                new_sections = []
+                for s in sections:
+                    if remaining <= 0:
+                        new_sections.append(s)
+                    elif s["length_m"] > remaining:
+                        s["length_m"] -= remaining
+                        new_sections.append(s)
+                        remaining = 0
+                    else:
+                        remaining -= s["length_m"]
+                st.session_state.job["ct_strings"][st.session_state.job["active_ct"]]["sections"] = new_sections
 
-                    for s in sections:
-                        if remaining <= 0:
-                            new_sections.append(s)
-                        elif s["length_m"] > remaining:
-                            s["length_m"] -= remaining
-                            new_sections.append(s)
-                            remaining = 0
-                        else:
-                            remaining -= s["length_m"]
+            st.subheader("Calculated")
+            st.metric("Total Length (m)", f"{calc_total_length(sections):.1f}")
+            st.metric("Internal Volume (m³)", f"{calc_internal_volume(sections):.3f}")
+            st.metric("Displacement (m³)", f"{calc_displacement(sections):.3f}")
 
-                    st.session_state.job["ct_strings"][st.session_state.job["active_ct"]]["sections"] = new_sections
+# =========================
+# WELL / JOB SETUP (PHASE 2)
+# =========================
+if page == "🛢️ Well / Job":
+    st.header("Well / Job Setup")
 
-            # -------------------------
-            # CALCULATED OUTPUTS
-            # -------------------------
-            st.markdown("---")
-            st.subheader("Calculated Properties")
+    st.subheader("Well Geometry")
+    geo = st.session_state.job["well"]["geometry"]
 
-            total_len = calc_total_length(sections)
-            int_vol = calc_internal_volume(sections)
-            disp = calc_displacement(sections)
+    geo["TVD_m"] = st.number_input("TVD (m)", value=geo["TVD_m"])
+    geo["KOP_m"] = st.number_input("KOP (m)", value=geo["KOP_m"])
+    geo["TD_m"] = st.number_input("TD (m)", value=geo["TD_m"])
 
-            st.metric("Total Length (m)", f"{total_len:.1f}")
-            st.metric("Internal Volume (m³)", f"{int_vol:.3f}")
-            st.metric("Displacement (m³)", f"{disp:.3f}")
+    st.markdown("---")
+    st.subheader("Casing / Liner")
 
-            st.info("Ratings shown are placeholders (Phase 2 refinement).")
+    c1, c2 = st.columns(2)
+    with c1:
+        casing_id = st.number_input("Casing ID (mm)", min_value=0.0)
+    with c2:
+        shoe_depth = st.number_input("Shoe depth (m)", min_value=0.0)
 
+    if st.button("Add Casing Section"):
+        if casing_id > 0 and shoe_depth > 0:
+            st.session_state.job["well"]["casing"].append(
+                {"id_mm": casing_id, "shoe_depth_m": shoe_depth}
+            )
+
+    for i, c in enumerate(st.session_state.job["well"]["casing"]):
+        st.write(f"{i+1}. ID {c['id_mm']} mm @ {c['shoe_depth_m']} m")
+
+    st.markdown("---")
+    st.subheader("Restrictions")
+
+    r1, r2, r3 = st.columns(3)
+    with r1:
+        r_name = st.text_input("Restriction name")
+    with r2:
+        r_id = st.number_input("Restriction ID (mm)", min_value=0.0)
+    with r3:
+        r_depth = st.number_input("Restriction depth (m)", min_value=0.0)
+
+    if st.button("Add Restriction"):
+        if r_name and r_id > 0 and r_depth > 0:
+            st.session_state.job["well"]["restrictions"].append(
+                {"name": r_name, "id_mm": r_id, "depth_m": r_depth}
+            )
+
+    for r in st.session_state.job["well"]["restrictions"]:
+        st.write(f"{r['name']} – ID {r['id_mm']} mm @ {r['depth_m']} m")
+
+    st.markdown("---")
+    st.subheader("Well Schematic")
+
+    schematic = st.file_uploader("Upload schematic", type=["png", "jpg", "jpeg", "pdf"])
+    if schematic:
+        st.session_state.job["well"]["schematic"] = schematic
+
+    if st.session_state.job["well"]["schematic"]:
+        if st.session_state.job["well"]["schematic"].type == "application/pdf":
+            st.info("PDF uploaded.")
         else:
-            st.info("No sections added yet.")
+            st.image(st.session_state.job["well"]["schematic"], use_column_width=True)
