@@ -79,42 +79,26 @@ if page == "🏠 Home":
     """)
 
 # =========================
-# CT STRINGS
+# CT STRINGS (RESTORED)
 # =========================
 
 elif page == "🧵 CT Strings":
     st.header("CT String Builder")
 
-    name = st.text_input("CT String name")
+    # ---- Create / Select String ----
+    string_name = st.text_input("CT String name")
 
-    st.subheader("Add section (Whip → Core)")
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        length = st.number_input("Length (m)", min_value=0.0)
-    with c2:
-        od = st.number_input("OD (mm)", min_value=0.0)
-    with c3:
-        wall = st.number_input("Wall thickness (mm)", min_value=0.0)
-
-    if st.button("Add section"):
-        if name and length > 0 and od > 0 and wall > 0:
-            if not job["ct"]["strings"] or job["ct"]["strings"][-1]["name"] != name:
-                job["ct"]["strings"].append({
-                    "name": name,
-                    "sections": []
-                })
-                job["ct"]["active_index"] = len(job["ct"]["strings"]) - 1
-
-            job["ct"]["strings"][-1]["sections"].append({
-                "length": length,
-                "od": od,
-                "wall": wall
+    if st.button("Create new CT string"):
+        if string_name:
+            job["ct"]["strings"].append({
+                "name": string_name,
+                "sections": []
             })
+            job["ct"]["active_index"] = len(job["ct"]["strings"]) - 1
 
-    if job["ct"]["strings"]:
-        st.subheader("Saved CT Strings")
-
+    if not job["ct"]["strings"]:
+        st.info("Create a CT string to begin.")
+    else:
         names = [s["name"] for s in job["ct"]["strings"]]
         job["ct"]["active_index"] = st.selectbox(
             "Active CT String",
@@ -125,26 +109,49 @@ elif page == "🧵 CT Strings":
 
         active = job["ct"]["strings"][job["ct"]["active_index"]]
 
-        total_len = 0
-        total_vol = 0
+        st.subheader("Add section (Whip → Core)")
 
-        for i, sec in enumerate(active["sections"], start=1):
-            id_mm = sec["od"] - 2 * sec["wall"]
-            id_m = id_mm / 1000
-            area = math.pi * (id_m / 2) ** 2
-            vol = area * sec["length"]
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            length = st.number_input("Section length (m)", min_value=0.0)
+        with c2:
+            od = st.number_input("OD (mm)", min_value=0.0)
+        with c3:
+            wall = st.number_input("Wall thickness (mm)", min_value=0.0)
 
-            total_len += sec["length"]
-            total_vol += vol
+        if st.button("Add section to active string"):
+            if length > 0 and od > 0 and wall > 0:
+                active["sections"].append({
+                    "length": length,
+                    "od": od,
+                    "wall": wall
+                })
 
-            st.write(
-                f"Section {i}: {sec['length']} m | "
-                f"OD {sec['od']} mm | Wall {sec['wall']} mm | "
-                f"Volume {vol:.3f} m³"
-            )
+        if active["sections"]:
+            st.markdown("### Sections (Whip → Core)")
 
-        st.success(f"Total Length: {total_len:.1f} m")
-        st.success(f"Total Internal Volume: {total_vol:.3f} m³")
+            total_len = 0.0
+            total_vol = 0.0
+
+            for i, sec in enumerate(active["sections"], start=1):
+                id_mm = sec["od"] - 2 * sec["wall"]
+                id_m = id_mm / 1000
+                area = math.pi * (id_m / 2) ** 2
+                vol = area * sec["length"]
+
+                total_len += sec["length"]
+                total_vol += vol
+
+                st.write(
+                    f"Section {i}: "
+                    f"{sec['length']} m | "
+                    f"OD {sec['od']} mm | "
+                    f"Wall {sec['wall']} mm | "
+                    f"Volume {vol:.3f} m³"
+                )
+
+            st.success(f"Total Length: {total_len:.1f} m")
+            st.success(f"Total Internal Volume: {total_vol:.3f} m³")
 
 # =========================
 # WELL / JOB
@@ -251,13 +258,13 @@ elif page == "🧊 Volumes":
     else:
         ct = job["ct"]["strings"][job["ct"]["active_index"]]
 
-        ct_vol = 0
+        ct_vol = 0.0
         for sec in ct["sections"]:
             id_m = (sec["od"] - 2 * sec["wall"]) / 1000
             area = math.pi * (id_m / 2) ** 2
             ct_vol += area * sec["length"]
 
-        ann_vol = 0
+        ann_vol = 0.0
         for c in job["well"]["casing"]:
             ann_id_m = c["id"] / 1000
             ct_od_m = ct["sections"][0]["od"] / 1000
