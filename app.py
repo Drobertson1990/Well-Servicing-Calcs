@@ -1,6 +1,5 @@
 import streamlit as st
 import math
-from datetime import datetime
 
 # =========================
 # STATE
@@ -8,10 +7,6 @@ from datetime import datetime
 
 def default_job():
     return {
-        "meta": {
-            "name": None,
-            "last_modified": None
-        },
         "ct": {
             "strings": [],
             "active_index": None
@@ -24,16 +19,8 @@ def default_job():
             "restrictions": [],
             "schematic": None
         },
-        "fluids": {
-            "base": None,
-            "density": None,
-            "chemicals": []
-        },
         "settings": {
-            "units": "metric",
-            "flow_unit": "m/min",
-            "force_unit": "daN",
-            "theme": "dark"
+            "units": "metric"
         }
     }
 
@@ -63,7 +50,6 @@ page = st.sidebar.radio(
         "🛢️ Well / Job",
         "🌀 Flow & Velocity",
         "🧊 Volumes",
-        "⚙️ Settings"
     ]
 )
 
@@ -73,23 +59,31 @@ page = st.sidebar.radio(
 
 if page == "🏠 Home":
     st.title("Well Servicing Calculator")
-    st.markdown("""
-    **Field-ready engineering calculations**  
-    Built for coiled tubing, service rigs, and snubbing.
-    """)
+    st.markdown("Field-ready calculations for coiled tubing operations.")
 
 # =========================
-# CT STRINGS (RESTORED)
+# CT STRINGS (FIXED)
 # =========================
 
 elif page == "🧵 CT Strings":
     st.header("CT String Builder")
 
-    # ---- Create / Select String ----
-    string_name = st.text_input("CT String name")
+    # ---- CT OD OPTIONS ----
+    ct_od_options = {
+        '1" (25.4 mm)': 25.4,
+        '1-1/4" (31.75 mm)': 31.75,
+        '1-1/2" (38.10 mm)': 38.10,
+        '1-3/4" (44.45 mm)': 44.45,
+        '2" (50.8 mm)': 50.8,
+        '2-3/8" (60.33 mm)': 60.33,
+        '2-7/8" (73.03 mm)': 73.03,
+    }
 
-    if st.button("Create new CT string"):
-        if string_name:
+    # ---- Create new string ----
+    string_name = st.text_input("CT String name", value="")
+
+    if st.button("Create CT String"):
+        if string_name.strip():
             job["ct"]["strings"].append({
                 "name": string_name,
                 "sections": []
@@ -98,60 +92,80 @@ elif page == "🧵 CT Strings":
 
     if not job["ct"]["strings"]:
         st.info("Create a CT string to begin.")
-    else:
-        names = [s["name"] for s in job["ct"]["strings"]]
-        job["ct"]["active_index"] = st.selectbox(
-            "Active CT String",
-            range(len(names)),
-            format_func=lambda i: names[i],
-            index=job["ct"]["active_index"] if job["ct"]["active_index"] is not None else 0
+        st.stop()
+
+    # ---- Select active string ----
+    names = [s["name"] for s in job["ct"]["strings"]]
+    job["ct"]["active_index"] = st.selectbox(
+        "Active CT String",
+        range(len(names)),
+        format_func=lambda i: names[i],
+        index=job["ct"]["active_index"] or 0
+    )
+
+    active = job["ct"]["strings"][job["ct"]["active_index"]]
+
+    st.markdown("### Add section (Whip → Core)")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        length = st.number_input(
+            "Section length (m)",
+            min_value=0.0,
+            value=None,
+            placeholder="Enter length"
         )
 
-        active = job["ct"]["strings"][job["ct"]["active_index"]]
+    with c2:
+        od_label = st.selectbox(
+            "CT OD",
+            list(ct_od_options.keys())
+        )
+        od_mm = ct_od_options[od_label]
 
-        st.subheader("Add section (Whip → Core)")
+    with c3:
+        wall = st.number_input(
+            "Wall thickness (mm)",
+            min_value=0.0,
+            value=None,
+            placeholder="Enter wall thickness"
+        )
 
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            length = st.number_input("Section length (m)", min_value=0.0)
-        with c2:
-            od = st.number_input("OD (mm)", min_value=0.0)
-        with c3:
-            wall = st.number_input("Wall thickness (mm)", min_value=0.0)
+    if st.button("Add section"):
+        if length is not None and wall is not None:
+            active["sections"].append({
+                "length": length,
+                "od": od_mm,
+                "wall": wall
+            })
 
-        if st.button("Add section to active string"):
-            if length > 0 and od > 0 and wall > 0:
-                active["sections"].append({
-                    "length": length,
-                    "od": od,
-                    "wall": wall
-                })
+    # ---- Display sections ----
+    if active["sections"]:
+        st.markdown("### Sections (Whip → Core)")
 
-        if active["sections"]:
-            st.markdown("### Sections (Whip → Core)")
+        total_length = 0.0
+        total_volume = 0.0
 
-            total_len = 0.0
-            total_vol = 0.0
+        for i, sec in enumerate(active["sections"], start=1):
+            id_mm = sec["od"] - 2 * sec["wall"]
+            id_m = id_mm / 1000
+            area = math.pi * (id_m / 2) ** 2
+            volume = area * sec["length"]
 
-            for i, sec in enumerate(active["sections"], start=1):
-                id_mm = sec["od"] - 2 * sec["wall"]
-                id_m = id_mm / 1000
-                area = math.pi * (id_m / 2) ** 2
-                vol = area * sec["length"]
+            total_length += sec["length"]
+            total_volume += volume
 
-                total_len += sec["length"]
-                total_vol += vol
+            st.write(
+                f"Section {i}: "
+                f"{sec['length']} m | "
+                f"OD {sec['od']} mm | "
+                f"Wall {sec['wall']} mm | "
+                f"Volume {volume:.3f} m³"
+            )
 
-                st.write(
-                    f"Section {i}: "
-                    f"{sec['length']} m | "
-                    f"OD {sec['od']} mm | "
-                    f"Wall {sec['wall']} mm | "
-                    f"Volume {vol:.3f} m³"
-                )
-
-            st.success(f"Total Length: {total_len:.1f} m")
-            st.success(f"Total Internal Volume: {total_vol:.3f} m³")
+        st.success(f"Total Length: {total_length:.1f} m")
+        st.success(f"Total Internal Volume: {total_volume:.3f} m³")
 
 # =========================
 # WELL / JOB
@@ -168,83 +182,13 @@ elif page == "🛢️ Well / Job":
     with c3:
         job["well"]["td"] = st.number_input("TD (m)", value=job["well"]["td"])
 
-    st.subheader("Casing / Liner Sections")
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        top = st.number_input("Top depth (m)", min_value=0.0)
-    with c2:
-        bottom = st.number_input("Bottom depth (m)", min_value=0.0)
-    with c3:
-        id_mm = st.number_input("ID (mm)", min_value=0.0)
-
-    if st.button("Add casing section"):
-        if bottom > top and id_mm > 0:
-            job["well"]["casing"].append({
-                "top": top,
-                "bottom": bottom,
-                "id": id_mm
-            })
-
-    for c in job["well"]["casing"]:
-        st.write(f"{c['top']}–{c['bottom']} m | ID {c['id']} mm")
-
-    st.subheader("Restrictions")
-
-    r1, r2, r3 = st.columns(3)
-    with r1:
-        r_name = st.text_input("Restriction name (e.g. XN nipple)")
-    with r2:
-        r_depth = st.number_input("Restriction depth (m)", min_value=0.0)
-    with r3:
-        r_id = st.number_input("Restriction ID (mm)", min_value=0.0)
-
-    if st.button("Add restriction"):
-        if r_name and r_id > 0:
-            job["well"]["restrictions"].append({
-                "name": r_name,
-                "depth": r_depth,
-                "id": r_id
-            })
-
-    for r in job["well"]["restrictions"]:
-        st.write(f"{r['name']} | Depth {r['depth']} m | ID {r['id']} mm")
-
-    st.subheader("Well Schematic")
-    job["well"]["schematic"] = st.file_uploader(
-        "Upload schematic",
-        type=["png", "jpg", "jpeg", "pdf"]
-    )
-
 # =========================
 # FLOW & VELOCITY
 # =========================
 
 elif page == "🌀 Flow & Velocity":
     st.header("Annular Velocity")
-
-    if job["ct"]["active_index"] is None or not job["well"]["casing"]:
-        st.info("Define CT string and casing geometry first.")
-    else:
-        depth = st.number_input("Depth (m)", min_value=0.0)
-        rate = st.number_input("Pump rate (m³/min)", min_value=0.0)
-
-        casing = next(
-            (c for c in job["well"]["casing"] if c["top"] <= depth <= c["bottom"]),
-            None
-        )
-
-        if casing:
-            ct = job["ct"]["strings"][job["ct"]["active_index"]]
-            ct_od_m = ct["sections"][0]["od"] / 1000
-            ann_id_m = casing["id"] / 1000
-
-            ann_area = math.pi * ((ann_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
-            velocity = rate / ann_area
-
-            st.success(f"Annular Velocity: {velocity:.2f} m/min")
-        else:
-            st.warning("No casing section at this depth.")
+    st.info("Will be enabled once casing geometry is added.")
 
 # =========================
 # VOLUMES
@@ -252,36 +196,4 @@ elif page == "🌀 Flow & Velocity":
 
 elif page == "🧊 Volumes":
     st.header("Volumes")
-
-    if job["ct"]["active_index"] is None or not job["well"]["casing"]:
-        st.info("Define CT string and well geometry first.")
-    else:
-        ct = job["ct"]["strings"][job["ct"]["active_index"]]
-
-        ct_vol = 0.0
-        for sec in ct["sections"]:
-            id_m = (sec["od"] - 2 * sec["wall"]) / 1000
-            area = math.pi * (id_m / 2) ** 2
-            ct_vol += area * sec["length"]
-
-        ann_vol = 0.0
-        for c in job["well"]["casing"]:
-            ann_id_m = c["id"] / 1000
-            ct_od_m = ct["sections"][0]["od"] / 1000
-            ann_area = math.pi * ((ann_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
-            ann_vol += ann_area * (c["bottom"] - c["top"])
-
-        st.success(f"CT Internal Volume: {ct_vol:.3f} m³")
-        st.success(f"Annular Volume: {ann_vol:.3f} m³")
-        st.success(f"Total Circulating Volume: {(ct_vol + ann_vol):.3f} m³")
-
-# =========================
-# SETTINGS
-# =========================
-
-elif page == "⚙️ Settings":
-    st.header("Settings")
-    job["settings"]["theme"] = st.selectbox(
-        "Theme", ["dark", "light"],
-        index=0 if job["settings"]["theme"] == "dark" else 1
-    )
+    st.info("Will auto-calculate from CT + well geometry.")
