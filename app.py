@@ -76,11 +76,6 @@ if page == "🏠 Home":
     st.markdown("""
     **Field-ready engineering calculations**  
     Built for coiled tubing, service rigs, and snubbing.
-
-    Use the menu on the left to:
-    - Build CT strings
-    - Define well geometry
-    - Calculate volumes and velocities
     """)
 
 # =========================
@@ -189,21 +184,24 @@ elif page == "🛢️ Well / Job":
 
     st.subheader("Restrictions")
 
-    r1, r2 = st.columns(2)
+    r1, r2, r3 = st.columns(3)
     with r1:
-        r_depth = st.number_input("Restriction depth (m)", min_value=0.0)
+        r_name = st.text_input("Restriction name (e.g. XN nipple)")
     with r2:
+        r_depth = st.number_input("Restriction depth (m)", min_value=0.0)
+    with r3:
         r_id = st.number_input("Restriction ID (mm)", min_value=0.0)
 
     if st.button("Add restriction"):
-        if r_id > 0:
+        if r_name and r_id > 0:
             job["well"]["restrictions"].append({
+                "name": r_name,
                 "depth": r_depth,
                 "id": r_id
             })
 
     for r in job["well"]["restrictions"]:
-        st.write(f"Depth {r['depth']} m | ID {r['id']} mm")
+        st.write(f"{r['name']} | Depth {r['depth']} m | ID {r['id']} mm")
 
     st.subheader("Well Schematic")
     job["well"]["schematic"] = st.file_uploader(
@@ -231,10 +229,8 @@ elif page == "🌀 Flow & Velocity":
 
         if casing:
             ct = job["ct"]["strings"][job["ct"]["active_index"]]
-            last_sec = ct["sections"][0]
-
+            ct_od_m = ct["sections"][0]["od"] / 1000
             ann_id_m = casing["id"] / 1000
-            ct_od_m = last_sec["od"] / 1000
 
             ann_area = math.pi * ((ann_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
             velocity = rate / ann_area
