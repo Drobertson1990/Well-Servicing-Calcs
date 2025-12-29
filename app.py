@@ -624,30 +624,31 @@ elif page == "Pressure":
     st.header("📉 Hydrostatic Pressure")
 
     # --- Preconditions ---
-    if job["well"]["tvd"] is None:
-        st.warning("TVD not set in Well / Job page.")
-        st.stop()
+if job["well"]["tvd"] is None:
+    st.warning("TVD not set in Well / Job page.")
+    st.stop()
 
-    if job["fluids"].get("blended_density") is None:
-        st.warning("Blended fluid density not set in Fluids page.")
-        st.stop()
+if job["fluids"].get("blended_density") is None:
+    st.warning("Blended fluid density not set in Fluids page.")
+    st.stop()
 
-    # --- Inputs ---
-    st.subheader("Inputs")
+# --- Inputs ---
+st.subheader("Inputs")
 
-    use_override = st.checkbox("Override depth")
+use_override = st.checkbox("Override depth")
 
-    if use_override:
-        depth = st.number_input(
-            "Depth used for calculation (m)",
-            min_value=0.0
-        )
-    else:
-        depth = job["well"]["tvd"]
-        st.info(f"Using TVD from Well / Job: {depth} m")
+if use_override:
+    depth = st.number_input(
+        "Depth used for calculation (m)",
+        min_value=0.0
+    )
+else:
+    depth = job["well"]["tvd"]
+    st.info(f"Using TVD from Well / Job: {depth} m")
 
-    density = job["fluids"]["blended_density"]
-    st.write(f"Blended fluid density: **{density:.1f} kg/m³**")
+density = job["fluids"]["blended_density"]  # ✅ FINAL blended density
+
+st.write(f"Blended fluid density: **{density:.1f} kg/m³**")
 
     # --- Calculation ---
     g = 9.81  # m/s²
