@@ -298,6 +298,14 @@ elif page == "🛢️ Well / Job":
 # FLOW & VELOCITY (SECTIONED + AVERAGE)
 # =========================
 
+the correct solution is:
+
+Add depth back in as a required input and use it to highlight the active casing / point velocity, while still calculating full-well results.
+
+Below is the corrected Flow & Velocity page ONLY.
+Nothing else is touched.
+
+🔁 REPLACE THE 🌀 FLOW & VELOCITY PAGE WITH THIS
 elif page == "🌀 Flow & Velocity":
     st.header("Flow & Annular Velocity")
 
@@ -311,19 +319,28 @@ elif page == "🌀 Flow & Velocity":
         ct = job["ct"]["strings"][job["ct"]["active_index"]]
         ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
 
-        pump_rate = st.number_input(
-            "Pump rate (m³/min)",
-            min_value=0.0,
-            value=0.0
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            depth = st.number_input(
+                "Depth (m)",
+                min_value=0.0,
+                value=0.0
+            )
+        with col2:
+            pump_rate = st.number_input(
+                "Pump rate (m³/min)",
+                min_value=0.0,
+                value=0.0
+            )
 
         if pump_rate <= 0:
-            st.info("Enter a pump rate to calculate velocity and bottoms up.")
+            st.info("Enter depth and pump rate to calculate velocity.")
         else:
             st.subheader("Annular Velocity by Casing Section")
 
             total_annular_volume = 0.0
             velocity_volume_sum = 0.0
+            point_velocity = None
 
             for c in job["well"]["casing"]:
                 section_length = c["bottom"] - c["top"]
@@ -345,6 +362,10 @@ elif page == "🌀 Flow & Velocity":
                 total_annular_volume += section_volume
                 velocity_volume_sum += velocity * section_volume
 
+                # Capture point velocity at selected depth
+                if c["top"] <= depth <= c["bottom"]:
+                    point_velocity = velocity
+
                 st.write(
                     f"🛢️ {c['id']} mm casing | "
                     f"{c['top']:.0f}–{c['bottom']:.0f} m | "
@@ -356,7 +377,15 @@ elif page == "🌀 Flow & Velocity":
                 bottoms_up_time = total_annular_volume / pump_rate
 
                 st.markdown("---")
-                st.subheader("Summary")
+                st.subheader("Results")
+
+                if point_velocity is not None:
+                    st.success(
+                        f"Annular Velocity at {depth:.0f} m: "
+                        f"{point_velocity:.2f} m/min"
+                    )
+                else:
+                    st.warning("Depth is outside defined casing sections.")
 
                 st.success(
                     f"Average Annular Velocity: {avg_velocity:.2f} m/min"
