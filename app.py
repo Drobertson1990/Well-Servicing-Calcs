@@ -79,72 +79,137 @@ if page == "🏠 Home":
     """)
 
 # =========================
-# CT STRINGS (UNCHANGED)
+# CT STRINGS
 # =========================
 
 elif page == "🧵 CT Strings":
     st.header("CT String Builder")
 
-    name = st.text_input("CT String name")
+    # ---- OD OPTIONS (LOCKED) ----
+    ct_od_options = {
+        '1" – 25.4 mm': 25.4,
+        '1-1/4" – 31.8 mm': 31.8,
+        '1-1/2" – 38.1 mm': 38.1,
+        '1-3/4" – 44.5 mm': 44.5,
+        '2" – 50.8 mm': 50.8,
+        '2-3/8" – 60.3 mm': 60.3,
+        '2-7/8" – 73.0 mm': 73.0
+    }
 
-    st.subheader("Add section (Whip → Core)")
+    # ---- CREATE / SELECT STRING ----
+    st.subheader("CT Strings")
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        length = st.number_input("Length (m)", min_value=0.0)
-    with c2:
-        od = st.number_input("OD (mm)", min_value=0.0)
-    with c3:
-        wall = st.number_input("Wall thickness (mm)", min_value=0.0)
+    col1, col2 = st.columns([2, 1])
 
-    if st.button("Add section"):
-        if name and length > 0 and od > 0 and wall > 0:
-            if not job["ct"]["strings"] or job["ct"]["strings"][-1]["name"] != name:
+    with col1:
+        new_name = st.text_input("Create new CT string", value="")
+
+    with col2:
+        if st.button("Add CT String"):
+            if new_name.strip():
                 job["ct"]["strings"].append({
-                    "name": name,
+                    "name": new_name.strip(),
                     "sections": []
                 })
                 job["ct"]["active_index"] = len(job["ct"]["strings"]) - 1
 
-            job["ct"]["strings"][-1]["sections"].append({
-                "length": length,
-                "od": od,
-                "wall": wall
+    if not job["ct"]["strings"]:
+        st.info("Create a CT string to begin.")
+        st.stop()
+
+    names = [s["name"] for s in job["ct"]["strings"]]
+
+    job["ct"]["active_index"] = st.selectbox(
+        "Active CT String",
+        range(len(names)),
+        format_func=lambda i: names[i],
+        index=job["ct"]["active_index"] if job["ct"]["active_index"] is not None else 0
+    )
+
+    ct = job["ct"]["strings"][job["ct"]["active_index"]]
+
+    # ---- ADD SECTION (WHIP → CORE) ----
+    st.markdown("### Add Section (Whip → Core)")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        sec_length = st.number_input("Length (m)", min_value=0.0, value=None)
+
+    with c2:
+        sec_od_label = st.selectbox("OD", list(ct_od_options.keys()))
+
+    with c3:
+        sec_wall = st.number_input("Wall thickness (mm)", min_value=0.0, value=None)
+
+    if st.button("Add Section"):
+        if sec_length and sec_wall:
+            ct["sections"].insert(0, {
+                "length": sec_length,
+                "od": ct_od_options[sec_od_label],
+                "wall": sec_wall
             })
+        else:
+            st.warning("All section fields must be filled.")
 
-    if job["ct"]["strings"]:
-        st.subheader("Saved CT Strings")
+    # ---- DISPLAY / EDIT SECTIONS ----
+    if not ct["sections"]:
+        st.info("No sections added yet.")
+        st.stop()
 
-        names = [s["name"] for s in job["ct"]["strings"]]
-        job["ct"]["active_index"] = st.selectbox(
-            "Active CT String",
-            range(len(names)),
-            format_func=lambda i: names[i],
-            index=job["ct"]["active_index"] if job["ct"]["active_index"] is not None else 0
-        )
+    st.markdown("### Sections (Whip → Core)")
 
-        active = job["ct"]["strings"][job["ct"]["active_index"]]
+    total_length = 0.0
+    internal_volume = 0.0
+    displacement_volume = 0.0
 
-        total_len = 0
-        total_vol = 0
+    for i, sec in enumerate(ct["sections"]):
+        id_mm = sec["od"] - 2 * sec["wall"]
 
-        for i, sec in enumerate(active["sections"], start=1):
-            id_mm = sec["od"] - 2 * sec["wall"]
-            id_m = id_mm / 1000
-            area = math.pi * (id_m / 2) ** 2
-            vol = area * sec["length"]
+        id_m = id_mm / 1000
+        od_m = sec["od"] / 1000
 
-            total_len += sec["length"]
-            total_vol += vol
+        area_id = math.pi * (id_m / 2) ** 2
+        area_od = math.pi * (od_m / 2) ** 2
 
-            st.write(
-                f"Section {i}: {sec['length']} m | "
-                f"OD {sec['od']} mm | Wall {sec['wall']} mm | "
-                f"Volume {vol:.3f} m³"
+        vol_internal = area_id * sec["length"]
+        vol_disp = area_od * sec["length"]
+
+        total_length += sec["length"]
+        internal_volume += vol_internal
+        displacement_volume += vol_disp
+
+        with st.expander(f"Section {i+1} | {sec['length']} m | OD {sec['od']} mm"):
+            st.write(f"Wall: {sec['wall']} mm")
+            st.write(f"Internal volume: {vol_internal:.3f} m³")
+            st.write(f"Displacement volume: {vol_disp:.3f} m³")
+
+            trim = st.number_input(
+                "Trim from whip end (m)",
+                min_value=0.0,
+                max_value=sec["length"],
+                value=0.0,
+                key=f"trim_{i}"
             )
 
-        st.success(f"Total Length: {total_len:.1f} m")
-        st.success(f"Total Internal Volume: {total_vol:.3f} m³")
+            if st.button("Apply Trim", key=f"apply_trim_{i}"):
+                sec["length"] -= trim
+
+            if st.button("Delete Section", key=f"del_sec_{i}"):
+                ct["sections"].pop(i)
+                st.experimental_rerun()
+
+    # ---- SUMMARY ----
+    st.markdown("---")
+    st.success(f"Total CT Length: {total_length:.1f} m")
+    st.success(f"CT Internal Volume: {internal_volume:.3f} m³")
+    st.success(f"CT Displacement Volume: {displacement_volume:.3f} m³")
+
+    # ---- DELETE STRING ----
+    if st.button("Delete Entire CT String"):
+        job["ct"]["strings"].pop(job["ct"]["active_index"])
+        job["ct"]["active_index"] = None
+        st.experimental_rerun()
 
 # =========================
 # WELL / JOB (RESTORED & CORRECT)
