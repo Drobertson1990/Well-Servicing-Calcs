@@ -76,15 +76,10 @@ if page == "🏠 Home":
     st.markdown("""
     **Field-ready engineering calculations**  
     Built for coiled tubing, service rigs, and snubbing.
-
-    Use the menu on the left to:
-    - Build CT strings
-    - Define well geometry
-    - Calculate volumes and velocities
     """)
 
 # =========================
-# CT STRINGS
+# CT STRINGS (UNCHANGED)
 # =========================
 
 elif page == "🧵 CT Strings":
@@ -152,12 +147,13 @@ elif page == "🧵 CT Strings":
         st.success(f"Total Internal Volume: {total_vol:.3f} m³")
 
 # =========================
-# WELL / JOB
+# WELL / JOB (RESTORED & CORRECT)
 # =========================
 
 elif page == "🛢️ Well / Job":
-    st.header("Well / Job Geometry")
+    st.header("Well / Job Setup")
 
+    # --- DEPTHS ---
     c1, c2, c3 = st.columns(3)
     with c1:
         job["well"]["tvd"] = st.number_input("TVD (m)", value=job["well"]["tvd"])
@@ -166,6 +162,7 @@ elif page == "🛢️ Well / Job":
     with c3:
         job["well"]["td"] = st.number_input("TD (m)", value=job["well"]["td"])
 
+    # --- CASING / LINER ---
     st.subheader("Casing / Liner Sections")
 
     c1, c2, c3 = st.columns(3)
@@ -174,9 +171,9 @@ elif page == "🛢️ Well / Job":
     with c2:
         bottom = st.number_input("Bottom depth (m)", min_value=0.0)
     with c3:
-        id_mm = st.number_input("ID (mm)", min_value=0.0)
+        id_mm = st.number_input("Internal diameter (mm)", min_value=0.0)
 
-    if st.button("Add casing section"):
+    if st.button("Add casing / liner section"):
         if bottom > top and id_mm > 0:
             job["well"]["casing"].append({
                 "top": top,
@@ -187,24 +184,31 @@ elif page == "🛢️ Well / Job":
     for c in job["well"]["casing"]:
         st.write(f"{c['top']}–{c['bottom']} m | ID {c['id']} mm")
 
+    # --- RESTRICTIONS ---
     st.subheader("Restrictions")
 
-    r1, r2 = st.columns(2)
+    r1, r2, r3 = st.columns(3)
     with r1:
-        r_depth = st.number_input("Restriction depth (m)", min_value=0.0)
+        r_name = st.text_input("Restriction name (e.g. XN nipple)")
     with r2:
+        r_depth = st.number_input("Restriction depth (m)", min_value=0.0)
+    with r3:
         r_id = st.number_input("Restriction ID (mm)", min_value=0.0)
 
     if st.button("Add restriction"):
-        if r_id > 0:
+        if r_name and r_id > 0:
             job["well"]["restrictions"].append({
+                "name": r_name,
                 "depth": r_depth,
                 "id": r_id
             })
 
     for r in job["well"]["restrictions"]:
-        st.write(f"Depth {r['depth']} m | ID {r['id']} mm")
+        st.write(
+            f"{r['name']} | Depth {r['depth']} m | ID {r['id']} mm"
+        )
 
+    # --- SCHEMATIC ---
     st.subheader("Well Schematic")
     job["well"]["schematic"] = st.file_uploader(
         "Upload schematic",
@@ -212,7 +216,7 @@ elif page == "🛢️ Well / Job":
     )
 
 # =========================
-# FLOW & VELOCITY
+# FLOW & VELOCITY (UNCHANGED)
 # =========================
 
 elif page == "🌀 Flow & Velocity":
@@ -244,7 +248,7 @@ elif page == "🌀 Flow & Velocity":
             st.warning("No casing section at this depth.")
 
 # =========================
-# VOLUMES
+# VOLUMES (UNCHANGED)
 # =========================
 
 elif page == "🧊 Volumes":
@@ -279,7 +283,7 @@ elif page == "🧊 Volumes":
 elif page == "⚙️ Settings":
     st.header("Settings")
     job["settings"]["theme"] = st.selectbox(
-        "Theme", ["dark", "light"],
+        "Theme",
+        ["dark", "light"],
         index=0 if job["settings"]["theme"] == "dark" else 1
     )
-    
