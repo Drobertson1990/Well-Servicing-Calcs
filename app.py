@@ -309,22 +309,25 @@ elif page == "🌀 Flow & Velocity":
         st.info("Define CT string and well geometry first.")
     else:
         ct = job["ct"]["strings"][job["ct"]["active_index"]]
-        ct_od_m = ct["sections"][0]["od"] / 1000
+        ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
 
         pump_rate = st.number_input(
             "Pump rate (m³/min)",
-            min_value=0.0
+            min_value=0.0,
+            value=0.0
         )
 
-        if pump_rate > 0:
+        if pump_rate <= 0:
+            st.info("Enter a pump rate to calculate velocity and bottoms up.")
+        else:
             st.subheader("Annular Velocity by Casing Section")
 
             total_annular_volume = 0.0
-            weighted_velocity_sum = 0.0
+            velocity_volume_sum = 0.0
 
             for c in job["well"]["casing"]:
-                casing_id_m = c["id"] / 1000
                 section_length = c["bottom"] - c["top"]
+                casing_id_m = c["id"] / 1000
 
                 ann_area = math.pi * (
                     (casing_id_m / 2) ** 2 - (ct_od_m / 2) ** 2
@@ -332,7 +335,7 @@ elif page == "🌀 Flow & Velocity":
 
                 if ann_area <= 0:
                     st.error(
-                        f"Invalid annulus in casing ID {c['id']} mm"
+                        f"Invalid annulus for casing ID {c['id']} mm"
                     )
                     continue
 
@@ -340,21 +343,27 @@ elif page == "🌀 Flow & Velocity":
                 section_volume = ann_area * section_length
 
                 total_annular_volume += section_volume
-                weighted_velocity_sum += velocity * section_volume
+                velocity_volume_sum += velocity * section_volume
 
                 st.write(
-                    f"{c['id']} mm casing | "
+                    f"🛢️ {c['id']} mm casing | "
                     f"{c['top']:.0f}–{c['bottom']:.0f} m | "
                     f"Velocity: {velocity:.2f} m/min"
                 )
 
             if total_annular_volume > 0:
-                avg_velocity = weighted_velocity_sum / total_annular_volume
+                avg_velocity = velocity_volume_sum / total_annular_volume
                 bottoms_up_time = total_annular_volume / pump_rate
 
                 st.markdown("---")
-                st.success(f"Average Annular Velocity: {avg_velocity:.2f} m/min")
-                st.success(f"Bottoms Up Time: {bottoms_up_time:.1f} minutes")
+                st.subheader("Summary")
+
+                st.success(
+                    f"Average Annular Velocity: {avg_velocity:.2f} m/min"
+                )
+                st.success(
+                    f"Bottoms Up Time: {bottoms_up_time:.1f} minutes"
+                )
 
 # =========================
 # SETTINGS
