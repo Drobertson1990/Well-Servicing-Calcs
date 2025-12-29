@@ -298,14 +298,6 @@ elif page == "🛢️ Well / Job":
 # FLOW & VELOCITY (SECTIONED + AVERAGE)
 # =========================
 
-the correct solution is:
-
-Add depth back in as a required input and use it to highlight the active casing / point velocity, while still calculating full-well results.
-
-Below is the corrected Flow & Velocity page ONLY.
-Nothing else is touched.
-
-🔁 REPLACE THE 🌀 FLOW & VELOCITY PAGE WITH THIS
 elif page == "🌀 Flow & Velocity":
     st.header("Flow & Annular Velocity")
 
