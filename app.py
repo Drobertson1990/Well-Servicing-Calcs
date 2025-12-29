@@ -210,7 +210,7 @@ elif page == "🧵 CT Strings":
         job["ct"]["strings"].pop(job["ct"]["active_index"])
         job["ct"]["active_index"] = None
         st.experimental_rerun()
-
+        
 # =========================
 # WELL / JOB (RESTORED & CORRECT)
 # =========================
