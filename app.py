@@ -74,7 +74,7 @@ page = st.sidebar.radio(
         "Flow & Velocity": "🌀 Flow & Velocity",
         "Volumes": "🧊 Volumes",
         "Fluids": "🧪 Fluids",
-        "Hydrostatic Pressure":"📉 Hydrostatic Pressure"
+        "Hydrostatic Pressure":"📉 Hydrostatic Pressure",
         "Settings": "⚙️ Settings"
     }[x]
 )
