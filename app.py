@@ -79,7 +79,7 @@ if page == "🏠 Home":
     """)
 
 # =========================
-# CT STRINGS
+# CT STRINGS (LOCKED)
 # =========================
 
 elif page == "🧵 CT Strings":
@@ -96,22 +96,19 @@ elif page == "🧵 CT Strings":
         '2-7/8" – 73.0 mm': 73.0
     }
 
-    # ---- CREATE / SELECT STRING ----
+    # ---- CREATE STRING ----
     st.subheader("CT Strings")
 
-    col1, col2 = st.columns([2, 1])
+    new_name = st.text_input("Create new CT string", value="", key="ct_new_name")
 
-    with col1:
-        new_name = st.text_input("Create new CT string", value="")
-
-    with col2:
-        if st.button("Add CT String"):
-            if new_name.strip():
-                job["ct"]["strings"].append({
-                    "name": new_name.strip(),
-                    "sections": []
-                })
-                job["ct"]["active_index"] = len(job["ct"]["strings"]) - 1
+    if st.button("Add CT String", key="add_ct_string"):
+        if new_name.strip():
+            job["ct"]["strings"].append({
+                "name": new_name.strip(),
+                "sections": [],
+                "ratings": {}
+            })
+            job["ct"]["active_index"] = len(job["ct"]["strings"]) - 1
 
     if not job["ct"]["strings"]:
         st.info("Create a CT string to begin.")
@@ -123,36 +120,54 @@ elif page == "🧵 CT Strings":
         "Active CT String",
         range(len(names)),
         format_func=lambda i: names[i],
-        index=job["ct"]["active_index"] if job["ct"]["active_index"] is not None else 0
+        index=job["ct"]["active_index"] or 0,
+        key="active_ct_string"
     )
 
     ct = job["ct"]["strings"][job["ct"]["active_index"]]
 
-    # ---- ADD SECTION (WHIP → CORE) ----
+    # ---- ADD SECTION ----
     st.markdown("### Add Section (Whip → Core)")
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        sec_length = st.number_input("Length (m)", min_value=0.0, value=None)
+        sec_length = st.number_input(
+            "Length (m)",
+            min_value=0.0,
+            value=None,
+            step=1.0,
+            key="sec_length"
+        )
 
     with c2:
-        sec_od_label = st.selectbox("OD", list(ct_od_options.keys()))
+        sec_od_label = st.selectbox(
+            "OD",
+            list(ct_od_options.keys()),
+            key="sec_od"
+        )
 
     with c3:
-        sec_wall = st.number_input("Wall thickness (mm)", min_value=0.0, value=None)
+        sec_wall = st.number_input(
+            "Wall thickness (mm)",
+            min_value=0.0,
+            value=None,
+            step=0.1,
+            key="sec_wall"
+        )
 
-    if st.button("Add Section"):
-        if sec_length and sec_wall:
+    if st.button("Add Section", key="add_section"):
+        if sec_length is not None and sec_wall is not None:
             ct["sections"].insert(0, {
                 "length": sec_length,
                 "od": ct_od_options[sec_od_label],
                 "wall": sec_wall
             })
+            st.experimental_rerun()
         else:
             st.warning("All section fields must be filled.")
 
-    # ---- DISPLAY / EDIT SECTIONS ----
+    # ---- DISPLAY SECTIONS ----
     if not ct["sections"]:
         st.info("No sections added yet.")
         st.stop()
@@ -179,8 +194,10 @@ elif page == "🧵 CT Strings":
         internal_volume += vol_internal
         displacement_volume += vol_disp
 
-        with st.expander(f"Section {i+1} | {sec['length']} m | OD {sec['od']} mm"):
-            st.write(f"Wall: {sec['wall']} mm")
+        with st.expander(
+            f"Section {i+1} | {sec['length']} m | OD {sec['od']} mm"
+        ):
+            st.write(f"Wall thickness: {sec['wall']} mm")
             st.write(f"Internal volume: {vol_internal:.3f} m³")
             st.write(f"Displacement volume: {vol_disp:.3f} m³")
 
@@ -194,8 +211,9 @@ elif page == "🧵 CT Strings":
 
             if st.button("Apply Trim", key=f"apply_trim_{i}"):
                 sec["length"] -= trim
+                st.experimental_rerun()
 
-            if st.button("Delete Section", key=f"del_sec_{i}"):
+            if st.button("Delete Section", key=f"delete_sec_{i}"):
                 ct["sections"].pop(i)
                 st.experimental_rerun()
 
@@ -206,7 +224,7 @@ elif page == "🧵 CT Strings":
     st.success(f"CT Displacement Volume: {displacement_volume:.3f} m³")
 
     # ---- DELETE STRING ----
-    if st.button("Delete Entire CT String"):
+    if st.button("Delete Entire CT String", key="delete_ct_string"):
         job["ct"]["strings"].pop(job["ct"]["active_index"])
         job["ct"]["active_index"] = None
         st.experimental_rerun()
