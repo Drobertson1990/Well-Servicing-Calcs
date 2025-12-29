@@ -509,43 +509,40 @@ elif page == "🧊 Volumes":
                 st.success(f"Hole Volume: {hole_vol_d:.3f} m³")
                 st.success(f"Total Circulating Volume: {total_circ_d:.3f} m³")
 
-
+# =========================
+# FLUIDS
+# =========================
 
 elif page == "Fluids":
-    st.header("Fluids")
+    st.header("🧪 Fluids")
 
-    # -------------------------
-    # BASE FLUID
-    # -------------------------
+    # ---------- BASE FLUID ----------
     st.subheader("Base Fluid")
 
-    base_fluid = st.selectbox(
+    base_type = st.selectbox(
         "Base fluid type",
         ["Fresh Water", "Produced Water", "Custom"]
     )
 
-    if base_fluid == "Fresh Water":
+    if base_type == "Fresh Water":
         base_density = 1000.0  # kg/m³
         st.info("Fresh water density set to 1000 kg/m³")
 
-    elif base_fluid == "Produced Water":
-        base_density = 1050.0  # kg/m³ (typical average)
+    elif base_type == "Produced Water":
+        base_density = 1050.0  # typical average
         st.info("Produced water density set to 1050 kg/m³")
 
     else:
         base_density = st.number_input(
             "Base fluid density (kg/m³)",
             min_value=500.0,
-            value=1000.0,
-            step=1.0
+            max_value=2000.0
         )
 
-    job["fluids"]["base"] = base_fluid
+    job["fluids"]["base"] = base_type
     job["fluids"]["density"] = base_density
 
-    # -------------------------
-    # CHEMICALS
-    # -------------------------
+    # ---------- CHEMICALS ----------
     st.markdown("---")
     st.subheader("Chemicals")
 
@@ -553,76 +550,68 @@ elif page == "Fluids":
         job["fluids"]["chemicals"] = []
 
     c1, c2, c3 = st.columns(3)
+
     with c1:
         chem_name = st.text_input("Chemical name")
+
     with c2:
+        chem_rate = st.number_input(
+            "Concentration (L/m³)",
+            min_value=0.0
+        )
+
+    with c3:
         chem_density = st.number_input(
             "Chemical density (kg/m³)",
             min_value=500.0,
-            step=10.0
-        )
-    with c3:
-        chem_conc = st.number_input(
-            "Concentration (L/m³)",
-            min_value=0.0,
-            step=0.1
+            max_value=3000.0
         )
 
     if st.button("Add chemical"):
-        if chem_name and chem_density > 0 and chem_conc > 0:
+        if chem_name and chem_rate > 0 and chem_density > 0:
             job["fluids"]["chemicals"].append({
                 "name": chem_name,
-                "density": chem_density,
-                "concentration": chem_conc
+                "rate": chem_rate,
+                "density": chem_density
             })
-        else:
-            st.warning("Fill in all chemical fields.")
 
-    # -------------------------
-    # DISPLAY CHEMICALS
-    # -------------------------
+    # ---------- DISPLAY CHEMICALS ----------
     if job["fluids"]["chemicals"]:
-        st.markdown("### Added Chemicals")
+        st.markdown("### Added chemicals")
+
+        total_additive_mass = 0.0
+        total_additive_volume = 0.0
 
         for i, chem in enumerate(job["fluids"]["chemicals"], start=1):
+            vol_m3 = chem["rate"] / 1000  # L/m³ → m³/m³
+            mass = vol_m3 * chem["density"]
+
+            total_additive_volume += vol_m3
+            total_additive_mass += mass
+
             st.write(
                 f"{i}. {chem['name']} | "
-                f"Density: {chem['density']} kg/m³ | "
-                f"Concentration: {chem['concentration']} L/m³"
+                f"{chem['rate']} L/m³ | "
+                f"{chem['density']} kg/m³"
             )
 
-    # -------------------------
-    # BLENDED DENSITY
-    # -------------------------
+    else:
+        total_additive_volume = 0.0
+        total_additive_mass = 0.0
+
+    # ---------- BLENDED DENSITY ----------
     st.markdown("---")
     st.subheader("Blended Fluid Density")
 
-    total_density = base_density
-    total_volume_factor = 1.0  # base fluid = 1 m³
+    base_volume = 1.0  # per m³
+    base_mass = base_density * base_volume
 
-    for chem in job["fluids"]["chemicals"]:
-        chem_vol = chem["concentration"] / 1000.0  # L → m³
-        total_density += chem["density"] * chem_vol
-        total_volume_factor += chem_vol
+    blended_volume = base_volume + total_additive_volume
+    blended_mass = base_mass + total_additive_mass
 
-    blended_density = total_density / total_volume_factor
+    blended_density = blended_mass / blended_volume
 
-    st.success(f"Blended Density: {blended_density:.1f} kg/m³")
-
-    # -------------------------
-    # KILL FLUID
-    # -------------------------
-    st.markdown("---")
-    st.subheader("Kill Fluid")
-
-    kill_density = st.number_input(
-        "Kill fluid density (kg/m³)",
-        min_value=500.0,
-        step=1.0
-    )
-
-    if kill_density > 0:
-        st.info(f"Kill fluid gradient ≈ {kill_density * 9.81 / 100000:.3f} MPa/m")
+    st.success(f"Blended density: {blended_density:.1f} kg/m³")
         
 # =========================
 # SETTINGS
