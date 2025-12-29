@@ -64,6 +64,7 @@ page = st.sidebar.radio(
         "Flow & Velocity",
         "Volumes",
         "Fluids",
+        "Hydrostatic Pressure",
         "Settings"
     ],
     format_func=lambda x: {
@@ -73,6 +74,7 @@ page = st.sidebar.radio(
         "Flow & Velocity": "🌀 Flow & Velocity",
         "Volumes": "🧊 Volumes",
         "Fluids": "🧪 Fluids",
+        "Hydrostatic Pressure":"📉 Hydrostatic Pressure"
         "Settings": "⚙️ Settings"
     }[x]
 )
@@ -612,6 +614,63 @@ elif page == "Fluids":
     blended_density = blended_mass / blended_volume
 
     st.success(f"Blended density: {blended_density:.1f} kg/m³")
+
+# =========================
+# HYDROSTATIC PRESSURE
+# =========================
+
+elif page == "Pressure":
+
+    st.header("Hydrostatic Pressure")
+
+    # --- Preconditions ---
+    if job["well"]["tvd"] is None:
+        st.warning("TVD not set in Well / Job page.")
+        st.stop()
+
+    if job["fluids"]["density"] is None:
+        st.warning("Fluid density not set in Fluids page.")
+        st.stop()
+
+    # --- Inputs ---
+    st.subheader("Inputs")
+
+    use_override = st.checkbox("Override depth")
+
+    if use_override:
+        depth = st.number_input(
+            "Depth used for calculation (m)",
+            min_value=0.0
+        )
+    else:
+        depth = job["well"]["tvd"]
+        st.info(f"Using TVD from Well / Job: {depth} m")
+
+    density = job["fluids"]["density"]  # kg/m³
+
+    st.write(f"Fluid density: **{density:.1f} kg/m³**")
+
+    # --- Calculation ---
+    g = 9.81  # m/s²
+
+    pressure_pa = density * g * depth
+    pressure_kpa = pressure_pa / 1_000
+    pressure_mpa = pressure_pa / 1_000_000
+    pressure_bar = pressure_pa / 100_000
+    gradient_kpa_m = pressure_kpa / depth if depth > 0 else 0
+
+    # --- Results ---
+    st.subheader("Results")
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Hydrostatic Pressure", f"{pressure_kpa:,.0f} kPa")
+    with c2:
+        st.metric("Hydrostatic Pressure", f"{pressure_mpa:.2f} MPa")
+    with c3:
+        st.metric("Hydrostatic Pressure", f"{pressure_bar:.2f} bar")
+
+    st.metric("Pressure Gradient", f"{gradient_kpa_m:.2f} kPa/m")
         
 # =========================
 # SETTINGS
