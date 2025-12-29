@@ -81,7 +81,7 @@ page = st.sidebar.radio(
 # HOME
 # =========================
 
-if page == "🏠 Home":
+if page == "Home":
     st.title("Well Servicing Calculator")
     st.markdown("""
     **Field-ready engineering calculations**  
@@ -92,7 +92,7 @@ if page == "🏠 Home":
 # CT STRINGS (FINAL, LOCKABLE)
 # =========================
 
-elif page == "🧵 CT Strings":
+elif page == "CT Strings":
     st.header("CT String Builder")
 
     # ---- OD OPTIONS ----
@@ -239,7 +239,7 @@ elif page == "🧵 CT Strings":
 # WELL / JOB (RESTORED & CORRECT)
 # =========================
 
-elif page == "🛢️ Well / Job":
+elif page == "Well / Job":
     st.header("Well / Job Setup")
 
     # --- DEPTHS ---
@@ -308,7 +308,7 @@ elif page == "🛢️ Well / Job":
 # FLOW & VELOCITY (SECTIONED + AVERAGE)
 # =========================
 
-elif page == "🌀 Flow & Velocity":
+elif page == "Flow & Velocity":
     st.header("Flow & Annular Velocity")
 
     if (
@@ -398,7 +398,7 @@ elif page == "🌀 Flow & Velocity":
 # Volumes
 # =========================
 
-elif page == "🧊 Volumes":
+elif page == "Volumes":
     st.header("Volumes")
 
     # --- Guards ---
@@ -617,7 +617,7 @@ elif page == "Fluids":
 # SETTINGS
 # =========================
 
-elif page == "⚙️ Settings":
+elif page == "Settings":
     st.header("Settings")
     job["settings"]["theme"] = st.selectbox(
         "Theme",
