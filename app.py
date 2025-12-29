@@ -58,14 +58,23 @@ st.set_page_config(
 page = st.sidebar.radio(
     "Navigation",
     [
-        "🏠 Home",
-        "🧵 CT Strings",
-        "🛢️ Well / Job",
-        "🌀 Flow & Velocity",
-        "🧊 Volumes",
-        "🧪 Fluids",
-        "⚙️ Settings"
-    ]
+        "Home",
+        "CT Strings",
+        "Well / Job",
+        "Flow & Velocity",
+        "Volumes",
+        "Fluids",
+        "Settings"
+    ],
+    format_func=lambda x: {
+        "Home": "🏠 Home",
+        "CT Strings": "🧵 CT Strings",
+        "Well / Job": "🛢️ Well / Job",
+        "Flow & Velocity": "🌀 Flow & Velocity",
+        "Volumes": "🧊 Volumes",
+        "Fluids": "🧪 Fluids",
+        "Settings": "⚙️ Settings"
+    }[x]
 )
 
 # =========================
@@ -502,7 +511,8 @@ elif page == "🧊 Volumes":
 
 
 
-elif page == "🧪 Fluids":
+elif page == "Fluids":
+    st.error("FLUIDS PAGE LOADED")
     st.header("Fluids")
 
     # -------------------------
