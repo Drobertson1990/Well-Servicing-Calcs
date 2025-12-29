@@ -514,9 +514,9 @@ elif page == "🧊 Volumes":
 elif page == "Fluids":
     st.header("Fluids")
 
-    # -------------------------
+    # =========================
     # BASE FLUID
-    # -------------------------
+    # =========================
     st.subheader("Base Fluid")
 
     base_fluid = st.selectbox(
@@ -525,24 +525,28 @@ elif page == "Fluids":
     )
 
     if base_fluid == "Fresh Water":
-        base_density = 1000.0  # kg/m³
+        base_density = 1000.0
         st.info("Fresh water density set to 1000 kg/m³")
     elif base_fluid == "Produced Water":
-        base_density = 1050.0  # kg/m³ (typical average)
+        base_density = 1050.0
         st.info("Produced water density set to 1050 kg/m³")
     else:
-        base_density = st.number_input(
-            "Base fluid density (kg/m³)",
-            min_value=500.0,
-            max_value=2000.0
-        )
+        base_density = st.text_input("Base fluid density (kg/m³)")
+        try:
+            base_density = float(base_density)
+        except:
+            base_density = None
+
+    if base_density is None:
+        st.warning("Enter a valid base fluid density.")
+        return
 
     job["fluids"]["base"] = base_fluid
     job["fluids"]["density"] = base_density
 
-    # -------------------------
+    # =========================
     # CHEMICALS
-    # -------------------------
+    # =========================
     st.markdown("---")
     st.subheader("Chemicals")
 
@@ -553,66 +557,68 @@ elif page == "Fluids":
     with c1:
         chem_name = st.text_input("Chemical name")
     with c2:
-        chem_pct = st.number_input(
-            "Concentration (%)",
-            min_value=0.0,
-            max_value=100.0
-        )
+        chem_rate = st.text_input("Concentration (L/m³)")
     with c3:
-        chem_density = st.number_input(
-            "Chemical density (kg/m³)",
-            min_value=500.0,
-            max_value=3000.0
-        )
+        chem_density = st.text_input("Chemical density (kg/m³)")
+
+    try:
+        chem_rate = float(chem_rate)          # L/m³
+        chem_density = float(chem_density)    # kg/m³
+        chem_valid = chem_name and chem_rate > 0 and chem_density > 0
+    except:
+        chem_valid = False
 
     if st.button("Add chemical"):
-        if chem_name and chem_pct > 0 and chem_density > 0:
+        if chem_valid:
             job["fluids"]["chemicals"].append({
                 "name": chem_name,
-                "pct": chem_pct,
+                "rate_lpm3": chem_rate,
                 "density": chem_density
             })
+        else:
+            st.warning("Enter valid chemical name, rate (L/m³), and density.")
 
-    total_chem_pct = sum(c["pct"] for c in job["fluids"]["chemicals"])
-
-    # -------------------------
+    # =========================
     # DISPLAY CHEMICALS
-    # -------------------------
+    # =========================
+    total_chem_fraction = 0.0
+
     if job["fluids"]["chemicals"]:
         st.markdown("### Added Chemicals")
 
         for i, c in enumerate(job["fluids"]["chemicals"], start=1):
+            vol_frac = c["rate_lpm3"] / 1000
+            total_chem_fraction += vol_frac
+
             st.write(
                 f"{i}. {c['name']} | "
-                f"{c['pct']}% | "
+                f"{c['rate_lpm3']} L/m³ | "
                 f"{c['density']} kg/m³"
             )
 
-    if total_chem_pct > 100:
-        st.error("Total chemical concentration exceeds 100%.")
+    if total_chem_fraction > 1.0:
+        st.error("Total chemical concentration exceeds 1000 L/m³.")
+        return
 
-    # -------------------------
+    # =========================
     # BLENDED DENSITY
-    # -------------------------
-    if total_chem_pct <= 100:
-        base_pct = 100 - total_chem_pct
+    # =========================
+    base_fraction = 1.0 - total_chem_fraction
 
-        blended_density = (
-            base_density * (base_pct / 100)
-            + sum(
-                c["density"] * (c["pct"] / 100)
-                for c in job["fluids"]["chemicals"]
-            )
+    blended_density = (
+        base_density * base_fraction
+        + sum(
+            (c["density"] * (c["rate_lpm3"] / 1000))
+            for c in job["fluids"]["chemicals"]
         )
+    )
 
-        st.markdown("---")
-        st.subheader("Blended Fluid Properties")
+    job["fluids"]["blended_density"] = blended_density
 
-        st.success(
-            f"Blended Density: {blended_density:.1f} kg/m³"
-        )
+    st.markdown("---")
+    st.subheader("Blended Fluid Properties")
 
-        job["fluids"]["blended_density"] = blended_density
+    st.success(f"Blended Density: {blended_density:.1f} kg/m³")
         
 # =========================
 # SETTINGS
