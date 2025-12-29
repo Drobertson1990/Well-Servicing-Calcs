@@ -79,13 +79,13 @@ if page == "🏠 Home":
     """)
 
 # =========================
-# CT STRINGS (FINAL – CORRECT)
+# CT STRINGS (FINAL, LOCKABLE)
 # =========================
 
 elif page == "🧵 CT Strings":
     st.header("CT String Builder")
 
-    # ---- OD OPTIONS (LOCKED) ----
+    # ---- OD OPTIONS ----
     ct_od_options = {
         '1" – 25.4 mm': 25.4,
         '1-1/4" – 31.8 mm': 31.8,
@@ -99,14 +99,18 @@ elif page == "🧵 CT Strings":
     # ---- CREATE STRING ----
     st.subheader("CT Strings")
 
-    new_name = st.text_input("Create new CT string")
+    new_name = st.text_input("Create new CT string", value="")
 
     if st.button("Add CT String"):
         if new_name.strip():
             job["ct"]["strings"].append({
                 "name": new_name.strip(),
                 "sections": [],
-                "ratings": {}
+                "ratings": {
+                    "burst": None,
+                    "collapse": None,
+                    "pull": None
+                }
             })
             job["ct"]["active_index"] = len(job["ct"]["strings"]) - 1
 
@@ -115,7 +119,6 @@ elif page == "🧵 CT Strings":
         st.stop()
 
     names = [s["name"] for s in job["ct"]["strings"]]
-
     job["ct"]["active_index"] = st.selectbox(
         "Active CT String",
         range(len(names)),
@@ -125,43 +128,49 @@ elif page == "🧵 CT Strings":
 
     ct = job["ct"]["strings"][job["ct"]["active_index"]]
 
-    # ---- ADD SECTION FORM (THIS FIXES IT) ----
+    # ---- RATINGS (MANUAL) ----
+    st.markdown("### CT Ratings (80%)")
+
+    r1, r2, r3 = st.columns(3)
+
+    with r1:
+        burst = st.text_input("Burst (kPa)", value="")
+    with r2:
+        collapse = st.text_input("Collapse (kPa)", value="")
+    with r3:
+        pull = st.text_input("Max Pull (daN)", value="")
+
+    if burst:
+        ct["ratings"]["burst"] = float(burst)
+    if collapse:
+        ct["ratings"]["collapse"] = float(collapse)
+    if pull:
+        ct["ratings"]["pull"] = float(pull)
+
+    # ---- ADD SECTION ----
     st.markdown("### Add Section (Whip → Core)")
 
-    with st.form("add_section_form", clear_on_submit=True):
-        c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-        with c1:
-            sec_length = st.number_input(
-                "Length (m)",
-                min_value=0.0,
-                step=1.0
-            )
+    with c1:
+        sec_length_txt = st.text_input("Length (m)", value="", key="sec_len")
+    with c2:
+        sec_od_label = st.selectbox("OD", list(ct_od_options.keys()))
+    with c3:
+        sec_wall_txt = st.text_input("Wall thickness (mm)", value="", key="sec_wall")
 
-        with c2:
-            sec_od_label = st.selectbox(
-                "OD",
-                list(ct_od_options.keys())
-            )
+    if st.button("Add Section"):
+        if sec_length_txt and sec_wall_txt:
+            sec_length = float(sec_length_txt)
+            sec_wall = float(sec_wall_txt)
 
-        with c3:
-            sec_wall = st.number_input(
-                "Wall thickness (mm)",
-                min_value=0.0,
-                step=0.1
-            )
-
-        submitted = st.form_submit_button("Add Section")
-
-        if submitted:
-            if sec_length > 0 and sec_wall > 0:
-                ct["sections"].insert(0, {
-                    "length": sec_length,
-                    "od": ct_od_options[sec_od_label],
-                    "wall": sec_wall
-                })
-            else:
-                st.warning("All fields must be filled.")
+            ct["sections"].insert(0, {
+                "length": sec_length,
+                "od": ct_od_options[sec_od_label],
+                "wall": sec_wall
+            })
+        else:
+            st.warning("All fields must be filled.")
 
     # ---- DISPLAY SECTIONS ----
     if not ct["sections"]:
@@ -194,17 +203,17 @@ elif page == "🧵 CT Strings":
             st.write(f"Internal volume: {vol_internal:.3f} m³")
             st.write(f"Displacement volume: {vol_disp:.3f} m³")
 
-            trim = st.number_input(
+            trim_txt = st.text_input(
                 "Trim from whip end (m)",
-                min_value=0.0,
-                max_value=sec["length"],
-                value=0.0,
+                value="",
                 key=f"trim_{i}"
             )
 
-            if st.button("Apply Trim", key=f"apply_trim_{i}"):
-                sec["length"] -= trim
-                st.experimental_rerun()
+            if trim_txt:
+                trim = float(trim_txt)
+                if st.button("Apply Trim", key=f"apply_trim_{i}"):
+                    sec["length"] -= trim
+                    st.experimental_rerun()
 
             if st.button("Delete Section", key=f"delete_sec_{i}"):
                 ct["sections"].pop(i)
