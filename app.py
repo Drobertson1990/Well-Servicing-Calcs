@@ -451,7 +451,7 @@ elif page == "🧊 Volumes":
         st.success(f"CT Internal Volume: {ct_internal_vol:.3f} m³")
         st.success(f"CT Displacement: {ct_displacement:.3f} m³")
         st.success(f"Annular Volume (to TD): {annular_vol:.3f} m³")
-        st.success(f"Whole-Hole Volume (to TD): {hole_vol:.3f} m³")
+        st.success(f"Hole Volume (to TD): {hole_vol:.3f} m³")
         st.success(f"Total Circulating Volume: {total_circ_vol:.3f} m³")
 
         # =========================
@@ -496,7 +496,7 @@ elif page == "🧊 Volumes":
 
                 st.success(f"Annular Volume: {ann_vol_d:.3f} m³")
                 st.success(f"CT Displacement: {ct_disp_d:.3f} m³")
-                st.success(f"Whole-Hole Volume: {hole_vol_d:.3f} m³")
+                st.success(f"Hole Volume: {hole_vol_d:.3f} m³")
                 st.success(f"Total Circulating Volume: {total_circ_d:.3f} m³")
                 
 # =========================
