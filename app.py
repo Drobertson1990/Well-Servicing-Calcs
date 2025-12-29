@@ -64,7 +64,7 @@ page = st.sidebar.radio(
         "Flow & Velocity",
         "Volumes",
         "Fluids",
-        "Hydrostatic Pressure",
+        "Pressure",
         "Settings"
     ],
     format_func=lambda x: {
@@ -74,7 +74,7 @@ page = st.sidebar.radio(
         "Flow & Velocity": "🌀 Flow & Velocity",
         "Volumes": "🧊 Volumes",
         "Fluids": "🧪 Fluids",
-        "Hydrostatic Pressure":"📉 Hydrostatic Pressure",
+        "Pressure":"📉 Pressure",
         "Settings": "⚙️ Settings"
     }[x]
 )
