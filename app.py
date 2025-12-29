@@ -311,21 +311,37 @@ elif page == "🌀 Flow & Velocity":
         ct = job["ct"]["strings"][job["ct"]["active_index"]]
         ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
 
+        # --- Inputs (start EMPTY) ---
+        if "flow_depth" not in st.session_state:
+            st.session_state.flow_depth = None
+        if "flow_rate" not in st.session_state:
+            st.session_state.flow_rate = None
+
         col1, col2 = st.columns(2)
+
         with col1:
             depth = st.number_input(
                 "Depth (m)",
                 min_value=0.0,
-                value=0.0
+                value=st.session_state.flow_depth
+                if st.session_state.flow_depth is not None else 0.0,
+                key="flow_depth_input"
             )
+            if depth == 0:
+                depth = None
+
         with col2:
             pump_rate = st.number_input(
                 "Pump rate (m³/min)",
                 min_value=0.0,
-                value=0.0
+                value=st.session_state.flow_rate
+                if st.session_state.flow_rate is not None else 0.0,
+                key="flow_rate_input"
             )
+            if pump_rate == 0:
+                pump_rate = None
 
-        if pump_rate <= 0:
+        if depth is None or pump_rate is None:
             st.info("Enter depth and pump rate to calculate velocity.")
         else:
             st.subheader("Annular Velocity by Casing Section")
@@ -354,12 +370,11 @@ elif page == "🌀 Flow & Velocity":
                 total_annular_volume += section_volume
                 velocity_volume_sum += velocity * section_volume
 
-                # Capture point velocity at selected depth
                 if c["top"] <= depth <= c["bottom"]:
                     point_velocity = velocity
 
                 st.write(
-                    f"🛢️ {c['id']} mm casing | "
+                    f"{c['id']} mm casing | "
                     f"{c['top']:.0f}–{c['bottom']:.0f} m | "
                     f"Velocity: {velocity:.2f} m/min"
                 )
@@ -377,7 +392,9 @@ elif page == "🌀 Flow & Velocity":
                         f"{point_velocity:.2f} m/min"
                     )
                 else:
-                    st.warning("Depth is outside defined casing sections.")
+                    st.warning(
+                        "Depth is outside defined casing sections."
+                    )
 
                 st.success(
                     f"Average Annular Velocity: {avg_velocity:.2f} m/min"
@@ -385,7 +402,7 @@ elif page == "🌀 Flow & Velocity":
                 st.success(
                     f"Bottoms Up Time: {bottoms_up_time:.1f} minutes"
                 )
-
+                
 # =========================
 # SETTINGS
 # =========================
