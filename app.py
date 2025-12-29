@@ -63,6 +63,7 @@ page = st.sidebar.radio(
         "🛢️ Well / Job",
         "🌀 Flow & Velocity",
         "🧊 Volumes",
+        "🧪 Fluids",
         "⚙️ Settings"
     ]
 )
@@ -498,7 +499,114 @@ elif page == "🧊 Volumes":
                 st.success(f"CT Displacement: {ct_disp_d:.3f} m³")
                 st.success(f"Hole Volume: {hole_vol_d:.3f} m³")
                 st.success(f"Total Circulating Volume: {total_circ_d:.3f} m³")
-                
+
+# =========================
+# 🧪 Fluids
+# =========================
+
+elif page == "🧪 Fluids":
+    st.header("Fluids")
+
+    # -------------------------
+    # BASE FLUID
+    # -------------------------
+    st.subheader("Base Fluid")
+
+    base_fluid = st.selectbox(
+        "Base fluid type",
+        ["Fresh Water", "Produced Water", "Custom"]
+    )
+
+    if base_fluid == "Fresh Water":
+        base_density = 1000.0  # kg/m³
+        st.info("Fresh water density set to 1000 kg/m³")
+    elif base_fluid == "Produced Water":
+        base_density = 1050.0  # kg/m³ (typical average)
+        st.info("Produced water density set to 1050 kg/m³")
+    else:
+        base_density = st.number_input(
+            "Base fluid density (kg/m³)",
+            min_value=500.0,
+            max_value=2000.0
+        )
+
+    job["fluids"]["base"] = base_fluid
+    job["fluids"]["density"] = base_density
+
+    # -------------------------
+    # CHEMICALS
+    # -------------------------
+    st.markdown("---")
+    st.subheader("Chemicals")
+
+    if "chemicals" not in job["fluids"]:
+        job["fluids"]["chemicals"] = []
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        chem_name = st.text_input("Chemical name")
+    with c2:
+        chem_pct = st.number_input(
+            "Concentration (%)",
+            min_value=0.0,
+            max_value=100.0
+        )
+    with c3:
+        chem_density = st.number_input(
+            "Chemical density (kg/m³)",
+            min_value=500.0,
+            max_value=3000.0
+        )
+
+    if st.button("Add chemical"):
+        if chem_name and chem_pct > 0 and chem_density > 0:
+            job["fluids"]["chemicals"].append({
+                "name": chem_name,
+                "pct": chem_pct,
+                "density": chem_density
+            })
+
+    total_chem_pct = sum(c["pct"] for c in job["fluids"]["chemicals"])
+
+    # -------------------------
+    # DISPLAY CHEMICALS
+    # -------------------------
+    if job["fluids"]["chemicals"]:
+        st.markdown("### Added Chemicals")
+
+        for i, c in enumerate(job["fluids"]["chemicals"], start=1):
+            st.write(
+                f"{i}. {c['name']} | "
+                f"{c['pct']}% | "
+                f"{c['density']} kg/m³"
+            )
+
+    if total_chem_pct > 100:
+        st.error("Total chemical concentration exceeds 100%.")
+
+    # -------------------------
+    # BLENDED DENSITY
+    # -------------------------
+    if total_chem_pct <= 100:
+        base_pct = 100 - total_chem_pct
+
+        blended_density = (
+            base_density * (base_pct / 100)
+            + sum(
+                c["density"] * (c["pct"] / 100)
+                for c in job["fluids"]["chemicals"]
+            )
+        )
+
+        st.markdown("---")
+        st.subheader("Blended Fluid Properties")
+
+        st.success(
+            f"Blended Density: {blended_density:.1f} kg/m³"
+        )
+
+        job["fluids"]["blended_density"] = blended_density
+        
 # =========================
 # SETTINGS
 # =========================
