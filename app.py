@@ -650,24 +650,6 @@ density = job["fluids"]["blended_density"]  # ✅ FINAL blended density
 
 st.write(f"Blended fluid density: **{density:.1f} kg/m³**")
 
-    # --- Inputs ---
-    st.subheader("Inputs")
-
-    use_override = st.checkbox("Override depth")
-
-    if use_override:
-        depth = st.number_input(
-            "Depth used for calculation (m)",
-            min_value=0.0
-        )
-    else:
-        depth = job["well"]["tvd"]
-        st.info(f"Using TVD from Well / Job: {depth} m")
-
-    density = job["fluids"]["density"]  # kg/m³
-
-    st.write(f"Fluid density: **{density:.1f} kg/m³**")
-
     # --- Calculation ---
     g = 9.81  # m/s²
 
