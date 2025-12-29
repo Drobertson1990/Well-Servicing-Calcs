@@ -299,38 +299,32 @@ elif page == "🛢️ Well / Job":
 # =========================
 
 elif page == "🌀 Flow & Velocity":
-    st.header("Annular Velocity")
+    st.header("Flow & Annular Velocity")
 
     if (
         job["ct"]["active_index"] is None
         or not job["ct"]["strings"][job["ct"]["active_index"]]["sections"]
         or not job["well"]["casing"]
     ):
-        st.info("Define CT string and casing geometry first.")
+        st.info("Define CT string and well geometry first.")
     else:
-        depth = st.number_input("Circulating depth (m)", min_value=0.0)
-        rate = st.number_input("Pump rate (m³/min)", min_value=0.0)
+        ct = job["ct"]["strings"][job["ct"]["active_index"]]
+        ct_od_m = ct["sections"][0]["od"] / 1000
 
-        if depth > 0 and rate > 0:
-            ct = job["ct"]["strings"][job["ct"]["active_index"]]
+        pump_rate = st.number_input(
+            "Pump rate (m³/min)",
+            min_value=0.0
+        )
 
-            # CT OD is constant – take from first section
-            ct_od_m = ct["sections"][0]["od"] / 1000
+        if pump_rate > 0:
+            st.subheader("Annular Velocity by Casing Section")
 
-            st.subheader("Casing Section Velocities")
-
-            total_weighted_velocity = 0.0
-            total_length = 0.0
+            total_annular_volume = 0.0
+            weighted_velocity_sum = 0.0
 
             for c in job["well"]["casing"]:
-                section_top = c["top"]
-                section_bottom = min(c["bottom"], depth)
-
-                if section_bottom <= section_top:
-                    continue  # section not in flow path
-
-                length = section_bottom - section_top
                 casing_id_m = c["id"] / 1000
+                section_length = c["bottom"] - c["top"]
 
                 ann_area = math.pi * (
                     (casing_id_m / 2) ** 2 - (ct_od_m / 2) ** 2
@@ -338,29 +332,29 @@ elif page == "🌀 Flow & Velocity":
 
                 if ann_area <= 0:
                     st.error(
-                        f"Invalid annulus in casing {c['id']} mm"
+                        f"Invalid annulus in casing ID {c['id']} mm"
                     )
                     continue
 
-                velocity = rate / ann_area
+                velocity = pump_rate / ann_area
+                section_volume = ann_area * section_length
 
-                total_weighted_velocity += velocity * length
-                total_length += length
+                total_annular_volume += section_volume
+                weighted_velocity_sum += velocity * section_volume
 
                 st.write(
                     f"{c['id']} mm casing | "
-                    f"{section_top:.0f}–{section_bottom:.0f} m | "
+                    f"{c['top']:.0f}–{c['bottom']:.0f} m | "
                     f"Velocity: {velocity:.2f} m/min"
                 )
 
-            if total_length > 0:
-                avg_velocity = total_weighted_velocity / total_length
-                st.success(
-                    f"Average Annular Velocity (0–{depth:.0f} m): "
-                    f"{avg_velocity:.2f} m/min"
-                )
-            else:
-                st.warning("No casing sections intersect this depth.")
+            if total_annular_volume > 0:
+                avg_velocity = weighted_velocity_sum / total_annular_volume
+                bottoms_up_time = total_annular_volume / pump_rate
+
+                st.markdown("---")
+                st.success(f"Average Annular Velocity: {avg_velocity:.2f} m/min")
+                st.success(f"Bottoms Up Time: {bottoms_up_time:.1f} minutes")
 
 # =========================
 # SETTINGS
