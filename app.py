@@ -295,65 +295,94 @@ elif page == "🛢️ Well / Job":
     )
 
 # =========================
-# FLOW & VELOCITY (UNCHANGED)
+# FLOW & VELOCITY (LOCKED, DEPTH-AWARE)
 # =========================
 
 elif page == "🌀 Flow & Velocity":
-    st.header("Annular Velocity")
+    st.header("Flow & Velocity")
 
-    if job["ct"]["active_index"] is None or not job["well"]["casing"]:
-        st.info("Define CT string and casing geometry first.")
-    else:
-        depth = st.number_input("Depth (m)", min_value=0.0)
-        rate = st.number_input("Pump rate (m³/min)", min_value=0.0)
+    # ---- VALIDATION ----
+    if job["ct"]["active_index"] is None:
+        st.info("Select an active CT string first.")
+        st.stop()
 
-        casing = next(
-            (c for c in job["well"]["casing"] if c["top"] <= depth <= c["bottom"]),
-            None
+    if not job["well"]["casing"]:
+        st.info("Define well casing geometry first.")
+        st.stop()
+
+    ct = job["ct"]["strings"][job["ct"]["active_index"]]
+
+    if not ct["sections"]:
+        st.info("Active CT string has no sections.")
+        st.stop()
+
+    # ---- INPUTS ----
+    depth = st.number_input("Depth (m)", min_value=0.0)
+    rate = st.number_input("Pump rate (m³/min)", min_value=0.0)
+
+    if depth <= 0 or rate <= 0:
+        st.info("Enter depth and pump rate.")
+        st.stop()
+
+    # ---- CT GEOMETRY ----
+    ct_od_mm = ct["sections"][0]["od"]  # OD constant for string
+    ct_od_m = ct_od_mm / 1000
+
+    total_annular_volume = 0.0
+    limiting_velocity = None
+
+    st.markdown("### Annular Sections")
+
+    for c in job["well"]["casing"]:
+        section_top = c["top"]
+        section_bottom = min(c["bottom"], depth)
+
+        if section_bottom <= section_top:
+            continue
+
+        casing_id_m = c["id"] / 1000
+
+        annular_area = math.pi * (
+            (casing_id_m / 2) ** 2 -
+            (ct_od_m / 2) ** 2
         )
 
-        if casing:
-            ct = job["ct"]["strings"][job["ct"]["active_index"]]
-            last_sec = ct["sections"][0]
+        if annular_area <= 0:
+            st.error("Invalid annular geometry detected.")
+            st.stop()
 
-            ann_id_m = casing["id"] / 1000
-            ct_od_m = last_sec["od"] / 1000
+        section_length = section_bottom - section_top
+        section_volume = annular_area * section_length
+        section_velocity = rate / annular_area
 
-            ann_area = math.pi * ((ann_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
-            velocity = rate / ann_area
+        total_annular_volume += section_volume
 
-            st.success(f"Annular Velocity: {velocity:.2f} m/min")
-        else:
-            st.warning("No casing section at this depth.")
+        if limiting_velocity is None or section_velocity < limiting_velocity:
+            limiting_velocity = section_velocity
 
-# =========================
-# VOLUMES (UNCHANGED)
-# =========================
+        with st.expander(
+            f"{section_top}–{section_bottom} m | ID {c['id']} mm"
+        ):
+            st.write(f"Annular velocity: {section_velocity:.2f} m/min")
+            st.write(f"Section volume: {section_volume:.3f} m³")
 
-elif page == "🧊 Volumes":
-    st.header("Volumes")
+    circulation_time = total_annular_volume / rate
 
-    if job["ct"]["active_index"] is None or not job["well"]["casing"]:
-        st.info("Define CT string and well geometry first.")
-    else:
-        ct = job["ct"]["strings"][job["ct"]["active_index"]]
+    # ---- OUTPUTS ----
+    st.markdown("### Results")
 
-        ct_vol = 0
-        for sec in ct["sections"]:
-            id_m = (sec["od"] - 2 * sec["wall"]) / 1000
-            area = math.pi * (id_m / 2) ** 2
-            ct_vol += area * sec["length"]
+    c1, c2 = st.columns(2)
 
-        ann_vol = 0
-        for c in job["well"]["casing"]:
-            ann_id_m = c["id"] / 1000
-            ct_od_m = ct["sections"][0]["od"] / 1000
-            ann_area = math.pi * ((ann_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
-            ann_vol += ann_area * (c["bottom"] - c["top"])
+    with c1:
+        st.success(f"Limiting Annular Velocity: {limiting_velocity:.2f} m/min")
 
-        st.success(f"CT Internal Volume: {ct_vol:.3f} m³")
-        st.success(f"Annular Volume: {ann_vol:.3f} m³")
-        st.success(f"Total Circulating Volume: {(ct_vol + ann_vol):.3f} m³")
+    with c2:
+        st.success(f"Circulation Time to Depth: {circulation_time:.1f} min")
+
+    st.markdown("---")
+    st.caption(
+        "Velocity calculated using constant CT OD and depth-varying casing IDs."
+    )
 
 # =========================
 # SETTINGS
