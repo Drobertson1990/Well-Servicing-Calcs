@@ -295,11 +295,11 @@ elif page == "🛢️ Well / Job":
     )
 
 # =========================
-# FLOW & VELOCITY (LOCKED, DEPTH-AWARE)
+# FLOW & VELOCITY (SECTIONED + AVERAGE)
 # =========================
 
 elif page == "🌀 Flow & Velocity":
-    st.header("Flow & Velocity")
+    st.header("Flow & Annular Velocity")
 
     # ---- VALIDATION ----
     if job["ct"]["active_index"] is None:
@@ -311,12 +311,8 @@ elif page == "🌀 Flow & Velocity":
         st.stop()
 
     ct = job["ct"]["strings"][job["ct"]["active_index"]]
+    ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
 
-    if not ct["sections"]:
-        st.info("Active CT string has no sections.")
-        st.stop()
-
-    # ---- INPUTS ----
     depth = st.number_input("Depth (m)", min_value=0.0)
     rate = st.number_input("Pump rate (m³/min)", min_value=0.0)
 
@@ -324,14 +320,9 @@ elif page == "🌀 Flow & Velocity":
         st.info("Enter depth and pump rate.")
         st.stop()
 
-    # ---- CT GEOMETRY ----
-    ct_od_mm = ct["sections"][0]["od"]  # OD constant for string
-    ct_od_m = ct_od_mm / 1000
-
     total_annular_volume = 0.0
     limiting_velocity = None
-
-    st.markdown("### Annular Sections")
+    section_results = []
 
     for c in job["well"]["casing"]:
         section_top = c["top"]
@@ -360,28 +351,42 @@ elif page == "🌀 Flow & Velocity":
         if limiting_velocity is None or section_velocity < limiting_velocity:
             limiting_velocity = section_velocity
 
-        with st.expander(
-            f"{section_top}–{section_bottom} m | ID {c['id']} mm"
-        ):
-            st.write(f"Annular velocity: {section_velocity:.2f} m/min")
-            st.write(f"Section volume: {section_volume:.3f} m³")
+        section_results.append({
+            "top": section_top,
+            "bottom": section_bottom,
+            "id": c["id"],
+            "velocity": section_velocity,
+            "volume": section_volume
+        })
 
     circulation_time = total_annular_volume / rate
+    average_velocity = total_annular_volume / circulation_time
 
-    # ---- OUTPUTS ----
-    st.markdown("### Results")
+    # ---- DISPLAY ----
+    st.markdown("### Annular Velocity by Section")
 
-    c1, c2 = st.columns(2)
-
-    with c1:
-        st.success(f"Limiting Annular Velocity: {limiting_velocity:.2f} m/min")
-
-    with c2:
-        st.success(f"Circulation Time to Depth: {circulation_time:.1f} min")
+    for s in section_results:
+        st.write(
+            f"**{s['top']}–{s['bottom']} m | "
+            f"Casing ID {s['id']} mm**  \n"
+            f"Velocity: {s['velocity']:.2f} m/min"
+        )
 
     st.markdown("---")
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.success(f"Average Annular Velocity: {average_velocity:.2f} m/min")
+
+    with c2:
+        st.success(f"Limiting Annular Velocity: {limiting_velocity:.2f} m/min")
+
+    with c3:
+        st.success(f"Circulation Time: {circulation_time:.1f} min")
+
     st.caption(
-        "Velocity calculated using constant CT OD and depth-varying casing IDs."
+        "Velocities calculated per casing section using constant CT OD. "
+        "Average velocity is volume-weighted."
     )
 
 # =========================
