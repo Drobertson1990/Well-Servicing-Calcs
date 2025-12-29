@@ -516,104 +516,94 @@ elif page == "Volumes":
 # =========================
 
 elif page == "Fluids":
+
     st.header("🧪 Fluids")
 
-    # ---------- BASE FLUID ----------
     st.subheader("Base Fluid")
 
-    base_type = st.selectbox(
-        "Base fluid type",
+    base_fluid = st.selectbox(
+        "Select base fluid",
         ["Fresh Water", "Produced Water", "Custom"]
     )
 
-    if base_type == "Fresh Water":
+    if base_fluid == "Fresh Water":
         base_density = 1000.0  # kg/m³
-        st.info("Fresh water density set to 1000 kg/m³")
+        st.info("Fresh water density assumed: 1000 kg/m³")
 
-    elif base_type == "Produced Water":
-        base_density = 1050.0  # typical average
-        st.info("Produced water density set to 1050 kg/m³")
+    elif base_fluid == "Produced Water":
+        base_density = 1100.0  # kg/m³ (average)
+        st.info("Produced water density assumed: 1100 kg/m³")
 
     else:
         base_density = st.number_input(
-            "Base fluid density (kg/m³)",
+            "Custom base fluid density (kg/m³)",
             min_value=500.0,
-            max_value=2000.0
+            max_value=2000.0,
+            step=1.0
         )
 
-    job["fluids"]["base"] = base_type
-    job["fluids"]["density"] = base_density
+    job["fluids"]["base"] = base_fluid
 
-    # ---------- CHEMICALS ----------
-    st.markdown("---")
+    # -------------------------
+    # Chemicals
+    # -------------------------
+
     st.subheader("Chemicals")
 
-    if "chemicals" not in job["fluids"]:
-        job["fluids"]["chemicals"] = []
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        chem_name = st.text_input("Chemical name")
-
-    with c2:
-        chem_rate = st.number_input(
-            "Concentration (L/m³)",
-            min_value=0.0
-        )
-
-    with c3:
-        chem_density = st.number_input(
-            "Chemical density (kg/m³)",
-            min_value=500.0,
-            max_value=3000.0
-        )
+    chem_name = st.text_input("Chemical name")
+    chem_density = st.number_input(
+        "Chemical density (kg/m³)",
+        min_value=500.0,
+        max_value=3000.0,
+        step=1.0
+    )
+    chem_rate = st.number_input(
+        "Concentration (L/m³)",
+        min_value=0.0,
+        step=0.1
+    )
 
     if st.button("Add chemical"):
-        if chem_name and chem_rate > 0 and chem_density > 0:
+        if chem_name and chem_rate > 0:
             job["fluids"]["chemicals"].append({
                 "name": chem_name,
-                "rate": chem_rate,
-                "density": chem_density
+                "density": chem_density,
+                "rate": chem_rate
             })
 
-    # ---------- DISPLAY CHEMICALS ----------
-    if job["fluids"]["chemicals"]:
-        st.markdown("### Added chemicals")
+    # -------------------------
+    # Blended Density
+    # -------------------------
 
-        total_additive_mass = 0.0
-        total_additive_volume = 0.0
+    total_volume = 1.0  # 1 m³ reference
+    total_mass = base_density * total_volume
 
-        for i, chem in enumerate(job["fluids"]["chemicals"], start=1):
-            vol_m3 = chem["rate"] / 1000  # L/m³ → m³/m³
-            mass = vol_m3 * chem["density"]
+    for chem in job["fluids"]["chemicals"]:
+        chem_vol = chem["rate"] / 1000  # L → m³
+        chem_mass = chem_vol * chem["density"]
 
-            total_additive_volume += vol_m3
-            total_additive_mass += mass
+        total_volume += chem_vol
+        total_mass += chem_mass
 
-            st.write(
-                f"{i}. {chem['name']} | "
-                f"{chem['rate']} L/m³ | "
-                f"{chem['density']} kg/m³"
-            )
+        st.write(
+            f"{chem['name']}: "
+            f"{chem['rate']} L/m³ | "
+            f"{chem['density']} kg/m³"
+        )
 
-    else:
-        total_additive_volume = 0.0
-        total_additive_mass = 0.0
+    blended_density = total_mass / total_volume
 
-    # ---------- BLENDED DENSITY ----------
+    job["fluids"]["density"] = base_density
+    job["fluids"]["blended_density"] = blended_density
+
+    # -------------------------
+    # Results
+    # -------------------------
+
     st.markdown("---")
-    st.subheader("Blended Fluid Density")
+    st.subheader("Results")
 
-    base_volume = 1.0  # per m³
-    base_mass = base_density * base_volume
-
-    blended_volume = base_volume + total_additive_volume
-    blended_mass = base_mass + total_additive_mass
-
-    blended_density = blended_mass / blended_volume
-
-    st.success(f"Blended density: {blended_density:.1f} kg/m³")
+    st.metric("Blended Fluid Density", f"{blended_density:.1f} kg/m³")
 
 # =========================
 # HYDROSTATIC PRESSURE
