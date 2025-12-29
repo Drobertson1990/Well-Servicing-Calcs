@@ -500,9 +500,7 @@ elif page == "🧊 Volumes":
                 st.success(f"Hole Volume: {hole_vol_d:.3f} m³")
                 st.success(f"Total Circulating Volume: {total_circ_d:.3f} m³")
 
-# =========================
-# 🧪 Fluids
-# =========================
+
 
 elif page == "🧪 Fluids":
     st.header("Fluids")
