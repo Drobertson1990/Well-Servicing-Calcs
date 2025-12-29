@@ -512,7 +512,6 @@ elif page == "🧊 Volumes":
 
 
 elif page == "Fluids":
-    st.error("FLUIDS PAGE LOADED")
     st.header("Fluids")
 
     # -------------------------
