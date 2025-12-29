@@ -311,38 +311,22 @@ elif page == "🌀 Flow & Velocity":
         ct = job["ct"]["strings"][job["ct"]["active_index"]]
         ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
 
-        # --- Inputs (start EMPTY) ---
-        if "flow_depth" not in st.session_state:
-            st.session_state.flow_depth = None
-        if "flow_rate" not in st.session_state:
-            st.session_state.flow_rate = None
-
         col1, col2 = st.columns(2)
 
         with col1:
-            depth = st.number_input(
-                "Depth (m)",
-                min_value=0.0,
-                value=st.session_state.flow_depth
-                if st.session_state.flow_depth is not None else 0.0,
-                key="flow_depth_input"
-            )
-            if depth == 0:
-                depth = None
-
+            depth_input = st.text_input("Depth (m)")
         with col2:
-            pump_rate = st.number_input(
-                "Pump rate (m³/min)",
-                min_value=0.0,
-                value=st.session_state.flow_rate
-                if st.session_state.flow_rate is not None else 0.0,
-                key="flow_rate_input"
-            )
-            if pump_rate == 0:
-                pump_rate = None
+            rate_input = st.text_input("Pump rate (m³/min)")
 
-        if depth is None or pump_rate is None:
-            st.info("Enter depth and pump rate to calculate velocity.")
+        try:
+            depth = float(depth_input)
+            pump_rate = float(rate_input)
+            valid = depth > 0 and pump_rate > 0
+        except (ValueError, TypeError):
+            valid = False
+
+        if not valid:
+            st.info("Enter valid depth and pump rate to calculate velocity.")
         else:
             st.subheader("Annular Velocity by Casing Section")
 
@@ -379,29 +363,26 @@ elif page == "🌀 Flow & Velocity":
                     f"Velocity: {velocity:.2f} m/min"
                 )
 
-            if total_annular_volume > 0:
-                avg_velocity = velocity_volume_sum / total_annular_volume
-                bottoms_up_time = total_annular_volume / pump_rate
+            avg_velocity = velocity_volume_sum / total_annular_volume
+            bottoms_up_time = total_annular_volume / pump_rate
 
-                st.markdown("---")
-                st.subheader("Results")
+            st.markdown("---")
+            st.subheader("Results")
 
-                if point_velocity is not None:
-                    st.success(
-                        f"Annular Velocity at {depth:.0f} m: "
-                        f"{point_velocity:.2f} m/min"
-                    )
-                else:
-                    st.warning(
-                        "Depth is outside defined casing sections."
-                    )
-
+            if point_velocity is not None:
                 st.success(
-                    f"Average Annular Velocity: {avg_velocity:.2f} m/min"
+                    f"Annular Velocity at {depth:.0f} m: "
+                    f"{point_velocity:.2f} m/min"
                 )
-                st.success(
-                    f"Bottoms Up Time: {bottoms_up_time:.1f} minutes"
-                )
+            else:
+                st.warning("Depth is outside defined casing sections.")
+
+            st.success(
+                f"Average Annular Velocity: {avg_velocity:.2f} m/min"
+            )
+            st.success(
+                f"Bottoms Up Time: {bottoms_up_time:.1f} minutes"
+            )
                 
 # =========================
 # SETTINGS
