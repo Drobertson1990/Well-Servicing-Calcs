@@ -383,6 +383,117 @@ elif page == "🌀 Flow & Velocity":
             st.success(
                 f"Bottoms Up Time: {bottoms_up_time:.1f} minutes"
             )
+
+elif page == "🧊 Volumes":
+    st.header("Volumes")
+
+    # --- Guards ---
+    if (
+        job["ct"]["active_index"] is None
+        or not job["ct"]["strings"][job["ct"]["active_index"]]["sections"]
+        or not job["well"]["casing"]
+        or job["well"]["td"] is None
+    ):
+        st.info("Define CT string and well geometry first.")
+    else:
+        ct = job["ct"]["strings"][job["ct"]["active_index"]]
+        td = job["well"]["td"]
+
+        # =========================
+        # CT INTERNAL VOLUME
+        # =========================
+        ct_internal_vol = 0.0
+        for sec in ct["sections"]:
+            id_m = (sec["od"] - 2 * sec["wall"]) / 1000
+            area = math.pi * (id_m / 2) ** 2
+            ct_internal_vol += area * sec["length"]
+
+        # =========================
+        # ANNULAR + HOLE VOLUMES (to TD)
+        # =========================
+        annular_vol = 0.0
+        hole_vol = 0.0
+
+        ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
+
+        for c in job["well"]["casing"]:
+            top = c["top"]
+            bottom = min(c["bottom"], td)
+
+            if bottom <= top:
+                continue
+
+            length = bottom - top
+            casing_id_m = c["id"] / 1000
+
+            casing_area = math.pi * (casing_id_m / 2) ** 2
+            ct_area = math.pi * (ct_od_m / 2) ** 2
+
+            hole_vol += casing_area * length
+            annular_vol += (casing_area - ct_area) * length
+
+        # =========================
+        # CT DISPLACEMENT
+        # =========================
+        ct_displacement = hole_vol - annular_vol
+
+        total_circ_vol = ct_internal_vol + annular_vol
+
+        # =========================
+        # DISPLAY — A (Always On)
+        # =========================
+        st.subheader("Volumes to TD")
+
+        st.success(f"CT Internal Volume: {ct_internal_vol:.3f} m³")
+        st.success(f"CT Displacement: {ct_displacement:.3f} m³")
+        st.success(f"Annular Volume (to TD): {annular_vol:.3f} m³")
+        st.success(f"Whole-Hole Volume (to TD): {hole_vol:.3f} m³")
+        st.success(f"Total Circulating Volume: {total_circ_vol:.3f} m³")
+
+        # =========================
+        # B — ADVANCED / PRECISE
+        # =========================
+        with st.expander("Advanced: Volumes to Specific Depth"):
+            depth_input = st.text_input("Depth (m)")
+
+            try:
+                depth = float(depth_input)
+                valid_depth = 0 < depth <= td
+            except:
+                valid_depth = False
+
+            if not valid_depth:
+                st.info("Enter a valid depth within TD.")
+            else:
+                ann_vol_d = 0.0
+                hole_vol_d = 0.0
+
+                for c in job["well"]["casing"]:
+                    top = c["top"]
+                    bottom = min(c["bottom"], depth)
+
+                    if bottom <= top:
+                        continue
+
+                    length = bottom - top
+                    casing_id_m = c["id"] / 1000
+
+                    casing_area = math.pi * (casing_id_m / 2) ** 2
+                    ct_area = math.pi * (ct_od_m / 2) ** 2
+
+                    hole_vol_d += casing_area * length
+                    ann_vol_d += (casing_area - ct_area) * length
+
+                ct_disp_d = hole_vol_d - ann_vol_d
+                total_circ_d = ct_internal_vol + ann_vol_d
+
+                st.markdown("### Volumes to Depth")
+                st.write(f"Depth: {depth:.0f} m")
+
+                st.success(f"Annular Volume: {ann_vol_d:.3f} m³")
+                st.success(f"CT Displacement: {ct_disp_d:.3f} m³")
+                st.success(f"Whole-Hole Volume: {hole_vol_d:.3f} m³")
+                st.success(f"Total Circulating Volume: {total_circ_d:.3f} m³")
                 
 # =========================
 # SETTINGS
