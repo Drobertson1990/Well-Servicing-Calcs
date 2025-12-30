@@ -108,11 +108,11 @@ page = st.sidebar.radio(
 
 if page == "Home":
 
-    st.markdown(
+st.markdown(
     """
     <div style="
         position: relative;
-        z-index: 1;
+        z-index: 2;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -153,6 +153,7 @@ if page == "Home":
     """,
     unsafe_allow_html=True
 )
+    
 # =========================
 # CT STRINGS (FINAL, LOCKABLE)
 # =========================
