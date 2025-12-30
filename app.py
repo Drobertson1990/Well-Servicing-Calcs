@@ -1,10 +1,12 @@
 import streamlit as st
 import math
 from datetime import datetime
+
 st.set_page_config(
     page_title="WellOps",
     layout="wide"
 )
+
 st.image(
     "assets/wellops_logo.png",
     use_column_width=True
