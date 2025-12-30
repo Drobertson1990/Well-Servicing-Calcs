@@ -23,7 +23,6 @@ with st.sidebar:
 # =========================
 
 st.markdown(
-        position: fixed;
         top: 120px;
         left: 50%;
         transform: translateX(-50%);
@@ -31,8 +30,6 @@ st.markdown(
         z-index: 0;
         pointer-events: none;
     ">
-        <img src="assets/wellops_logo.png" width="700">
-    </div>
     """,
     unsafe_allow_html=True
 )
