@@ -77,6 +77,46 @@ st.markdown(
 )
 
 # =========================
+# APP STATE (REQUIRED)
+# =========================
+
+def default_job():
+    return {
+        "meta": {
+            "name": None,
+            "last_modified": None
+        },
+        "ct": {
+            "strings": [],
+            "active_index": None
+        },
+        "well": {
+            "tvd": None,
+            "kop": None,
+            "td": None,
+            "casing": [],
+            "restrictions": [],
+            "schematic": None
+        },
+        "fluids": {
+            "base": None,
+            "density": None,
+            "chemicals": []
+        },
+        "settings": {
+            "units": "metric",
+            "flow_unit": "m/min",
+            "force_unit": "daN",
+            "theme": "dark"
+        }
+    }
+
+if "job" not in st.session_state:
+    st.session_state.job = default_job()
+
+job = st.session_state.job
+
+# =========================
 # NAVIGATION
 # =========================
 
