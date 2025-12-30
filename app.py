@@ -12,7 +12,7 @@ def add_watermark(image_path: str):
         f"""
         <style>
         .stApp {{
-            background-color: #0B1220;
+            background-color: #000000;
             background-image: url("data:image/png;base64,{encoded}");
             background-repeat: no-repeat;
             background-position: center 10vh;
