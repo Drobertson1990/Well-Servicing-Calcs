@@ -1,7 +1,6 @@
 import streamlit as st
 import math
 from datetime import datetime
-st.image("assets/wellops_logo.svg", use_container_width=True)
 
 # =========================
 # STATE
@@ -48,6 +47,11 @@ job = st.session_state.job
 # =========================
 
 st.set_page_config(
+
+    st.image(
+    "assets/wellops_logo.png",
+    use_column_width=True
+)
 
     page_title="Well Servicing Calculator",
     layout="wide"
