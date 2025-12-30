@@ -48,73 +48,7 @@ job = st.session_state.job
 # =========================
 
 st.set_page_config(
-    # =========================
-# GLOBAL BRANDING / STYLE
-# =========================
 
-st.markdown(
-    """
-    <style>
-    /* Page background */
-    .stApp {
-        background-image: url("assets/wellops_logo.png");
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 40%;
-        background-attachment: fixed;
-    }
-
-    /* Slight overlay so content stays readable */
-    .stApp::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(10, 14, 20, 0.88);
-        z-index: -1;
-    }
-
-    /* Headings */
-    h1, h2, h3 {
-        color: #FFFFFF;
-    }
-
-    /* Accent color (orange) */
-    .accent {
-        color: #F28C28;
-        font-weight: 600;
-    }
-
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #11161f;
-        border-right: 1px solid #2a2f3a;
-    }
-
-    /* Inputs */
-    input, select, textarea {
-        background-color: #1a1f2b !important;
-        color: #ffffff !important;
-        border: 1px solid #3a3f4b !important;
-    }
-
-    /* Buttons */
-    button {
-        background-color: #2a2f3a !important;
-        color: #ffffff !important;
-        border: 1px solid #F28C28 !important;
-    }
-
-    button:hover {
-        background-color: #F28C28 !important;
-        color: #000000 !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
     page_title="Well Servicing Calculator",
     layout="wide"
 )
