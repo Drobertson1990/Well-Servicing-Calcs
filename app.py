@@ -114,33 +114,36 @@ if page == "Home":
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            min-height: 70vh;
             text-align: center;
-            margin-top: 120px;
+            z-index: 1;
+            position: relative;
         ">
 
             <div style="
-                font-size: 64px;
-                font-weight: 800;
+                font-size: 72px;
+                font-weight: 900;
                 color: #00E676;
-                letter-spacing: 1px;
+                letter-spacing: 1.5px;
             ">
                 WellOps
             </div>
 
             <div style="
-                margin-top: 16px;
-                font-size: 26px;
+                margin-top: 18px;
+                font-size: 28px;
                 font-weight: 600;
-                color: #F9FAFB;
+                color: #FFFFFF;
             ">
                 Standardizing Well Execution
             </div>
 
             <div style="
-                margin-top: 14px;
-                max-width: 680px;
-                font-size: 18px;
-                line-height: 1.6;
+                margin-top: 16px;
+                max-width: 720px;
+                font-size: 19px;
+                line-height: 1.7;
                 color: #D1D5DB;
             ">
                 Integrated planning tools for safer, more predictable
