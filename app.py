@@ -112,7 +112,7 @@ if page == "Home":
                 font-weight: 600;
                 color: #F97316;
             ">
-                Plan. Execute. Verify.
+                Plan. Verify. Execute.
             </div>
 
             <div style="
