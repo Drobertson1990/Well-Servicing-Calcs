@@ -31,9 +31,9 @@ st.set_page_config(
 
 add_watermark("assets/wellops_watermark.png")
 
-st.sidebar.image(
-    "assets/wellops_logo.png",
-    use_column_width=True
+with st.sidebar:
+    st.image("assets/wellops_logo.png", use_column_width=True)
+    
 # =========================
 # APP STATE (REQUIRED)
 # =========================
