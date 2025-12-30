@@ -88,10 +88,12 @@ page = st.sidebar.radio(
 
 if page == "Home":
 
-    st.image(
-        "assets/wellops_logo.png",
-        width=280
-    )
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        st.image(
+            "assets/wellops_logo.png",
+            width=280
+        )
 
     components.html(
         """
@@ -108,7 +110,7 @@ if page == "Home":
                 margin-top: 18px;
                 font-size: 28px;
                 font-weight: 600;
-                color: #FFFFFF;
+                color: #F97316;
             ">
                 Plan. Execute. Verify.
             </div>
