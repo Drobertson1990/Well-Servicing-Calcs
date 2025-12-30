@@ -111,7 +111,7 @@ if page == "Home":
         """
         <div style="text-align: center; margin-top: 40px;">
             <h1 style="
-                color: #22C55E;
+                color: #00E676;
                 font-size: 64px;
                 font-weight: 800;
                 margin-bottom: 10px;
