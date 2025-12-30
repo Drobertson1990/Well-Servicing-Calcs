@@ -90,52 +90,44 @@ if page == "Home":
 
     st.image(
         "assets/wellops_logo.png",
-        width=280
+        width=260
     )
 
-    components.html(
+    st.markdown(
         """
         <div style="
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 70vh;
+            height: 65vh;
             text-align: center;
         ">
 
             <div style="
-                font-size: 72px;
-                font-weight: 900;
-                color: #00FF7F;
-                letter-spacing: 1.5px;
+                margin-top: 24px;
+                font-size: 30px;
+                font-weight: 700;
+                color: #F97316;
+                letter-spacing: 1.2px;
             ">
-                WellOps
+                Plan. Execute. Verify.
             </div>
 
             <div style="
                 margin-top: 18px;
-                font-size: 28px;
-                font-weight: 600;
-                color: #FFFFFF;
-            ">
-                Plan. Execute. Verify.
-
-            <div style="
-                margin-top: 16px;
                 max-width: 720px;
                 font-size: 19px;
                 line-height: 1.7;
                 color: #D1D5DB;
             ">
                 Integrated calculations for flow, volumes, and pressure.
-                
-Purpose-built for coiled tubing and intervention operations
+                Purpose-built for coiled tubing and intervention operations.
             </div>
 
         </div>
         """,
-        height=500
+        unsafe_allow_html=True
     )
     
 # =========================
