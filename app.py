@@ -1,46 +1,51 @@
 import streamlit as st
 import math
 from datetime import datetime
+import base64
+from pathlib import Path
 
+def set_background(image_file):
+    with open(image_file, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: #0B1220;
+            background-image: url("data:image/png;base64,{encoded}");
+            background-repeat: no-repeat;
+            background-position: center 120px;
+            background-size: 800px;
+            background-attachment: fixed;
+        }}
+
+        section[data-testid="stSidebar"] {{
+            background-color: #0F172A;
+        }}
+
+        button {{
+            background-color: #F97316 !important;
+            color: white !important;
+            border-radius: 6px;
+        }}
+
+        input, select, textarea {{
+            background-color: #111827 !important;
+            color: #F9FAFB !important;
+            border: 1px solid #374151 !important;
+        }}
+
+        h1, h2, h3, h4 {{
+            color: #F9FAFB;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 st.set_page_config(
     page_title="WellOps",
     layout="wide"
-)
-
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #0B1220;
-        background-image: url("assets/wellops_logo.png");
-        background-repeat: no-repeat;
-        background-position: center 120px;
-        background-size: 800px;
-        background-attachment: fixed;
-    }
-
-    section[data-testid="stSidebar"] {
-        background-color: #0F172A;
-    }
-
-    button {
-        background-color: #F97316 !important;
-        color: white !important;
-        border-radius: 6px;
-    }
-
-    input, select, textarea {
-        background-color: #111827 !important;
-        color: #F9FAFB !important;
-        border: 1px solid #374151 !important;
-    }
-
-    h1, h2, h3, h4 {
-        color: #F9FAFB;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
 )
 
 # =========================
