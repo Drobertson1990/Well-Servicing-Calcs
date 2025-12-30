@@ -5,10 +5,6 @@ import base64
 from pathlib import Path
 import streamlit.components.v1 as components
 
-def add_watermark(image_path: str):
-    img_bytes = Path(image_path).read_bytes()
-    encoded = base64.b64encode(img_bytes).decode()
-
     st.markdown(
         f"""
         <style>
@@ -108,6 +104,11 @@ page = st.sidebar.radio(
 # =========================
 
 if page == "Home":
+
+        st.image(
+        "assets/wellops_logo.png",
+        width=280
+    )
 
     components.html(
         """
