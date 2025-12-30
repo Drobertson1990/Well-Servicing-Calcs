@@ -85,10 +85,10 @@ page = st.sidebar.radio(
 # =========================
 
 if page == "Home":
-    st.title("WellOps - Presision Well Management")
+    st.title("Precision Well Operations")
     st.markdown("""
-    **Field-ready engineering calculations**  
-    Built for coiled tubing, service rigs, and snubbing.
+    **Integrated calculations for flow, volumes, and pressure**  
+    Purpose-built for coiled tubing and intervention operations.
     """)
 
 # =========================
