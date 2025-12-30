@@ -23,8 +23,6 @@ with st.sidebar:
 # =========================
 
 st.markdown(
-    """
-    <div style="
         position: fixed;
         top: 120px;
         left: 50%;
@@ -44,11 +42,8 @@ st.markdown(
 # =========================
 
 st.markdown(
-    """
-    <style>
-        .stApp {
-            background-color: #0B1220;
-        }
+        """
+        .stApp 
 
         section[data-testid="stSidebar"] {
             background-color: #0F172A;
@@ -69,7 +64,7 @@ st.markdown(
         h1, h2, h3, h4, p, span, label {
             color: #F9FAFB;
         }
-    </style>
+   
     """,
     unsafe_allow_html=True
 )
