@@ -119,8 +119,7 @@ if page == "Home":
                 font-weight: 600;
                 color: #FFFFFF;
             ">
-                Standardizing Well Execution
-            </div>
+                WellOps: Plan. Execute. Verify.
 
             <div style="
                 margin-top: 16px;
@@ -129,8 +128,8 @@ if page == "Home":
                 line-height: 1.7;
                 color: #D1D5DB;
             ">
-                Integrated planning tools for safer, more predictable
-                coiled tubing and intervention operations.
+                Integrated calculations for flow, volumes, and pressure
+Purpose-built for coiled tubing and intervention operations
             </div>
 
         </div>
