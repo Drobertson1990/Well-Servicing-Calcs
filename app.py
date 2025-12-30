@@ -2,59 +2,79 @@ import streamlit as st
 import math
 from datetime import datetime
 
+# =========================
+# PAGE CONFIG
+# =========================
+
 st.set_page_config(
     page_title="WellOps",
     layout="wide"
 )
 
+# =========================
+# SIDEBAR BRANDING
+# =========================
+
 st.sidebar.image(
     "assets/wellops_logo.png",
     use_column_width=True
 )
-    
+
 # =========================
-# STATE
+# WATERMARK LOGO
 # =========================
 
-def default_job():
-    return {
-        "meta": {
-            "name": None,
-            "last_modified": None
-        },
-        "ct": {
-            "strings": [],
-            "active_index": None
-        },
-        "well": {
-            "tvd": None,
-            "kop": None,
-            "td": None,
-            "casing": [],
-            "restrictions": [],
-            "schematic": None
-        },
-        "fluids": {
-            "base": None,
-            "density": None,
-            "chemicals": []
-        },
-        "settings": {
-            "units": "metric",
-            "flow_unit": "m/min",
-            "force_unit": "daN",
-            "theme": "dark"
-        }
+st.markdown(
+    """
+    <div style="
+        position: fixed;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0.06;
+        z-index: 0;
+        pointer-events: none;
+    ">
+        <img src="assets/wellops_logo.png" width="700">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# =========================
+# THEME STYLING
+# =========================
+
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0B1220;
     }
 
-if "job" not in st.session_state:
-    st.session_state.job = default_job()
+    section[data-testid="stSidebar"] {
+        background-color: #0F172A;
+    }
 
-job = st.session_state.job
+    button {
+        background-color: #F97316 !important;
+        color: white !important;
+        border-radius: 6px;
+    }
 
-# =========================
-# APP CONFIG
-# =========================
+    input, select, textarea {
+        background-color: #111827 !important;
+        color: #F9FAFB !important;
+        border: 1px solid #374151 !important;
+    }
+
+    h1, h2, h3, h4, p, span, label {
+        color: #F9FAFB;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # =========================
 # NAVIGATION
