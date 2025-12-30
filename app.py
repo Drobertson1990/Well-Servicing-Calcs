@@ -3,6 +3,7 @@ import math
 from datetime import datetime
 import base64
 from pathlib import Path
+import streamlit.components.v1 as components
 
 def add_watermark(image_path: str):
     img_bytes = Path(image_path).read_bytes()
@@ -108,23 +109,21 @@ page = st.sidebar.radio(
 
 if page == "Home":
 
-    st.markdown(
+    components.html(
         """
         <div style="
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 70vh;
+            height: 70vh;
             text-align: center;
-            z-index: 1;
-            position: relative;
         ">
 
             <div style="
                 font-size: 72px;
                 font-weight: 900;
-                color: #00E676;
+                color: #00FF7F;
                 letter-spacing: 1.5px;
             ">
                 WellOps
@@ -152,7 +151,7 @@ if page == "Home":
 
         </div>
         """,
-        unsafe_allow_html=True
+        height=500
     )
     
 # =========================
