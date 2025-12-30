@@ -23,6 +23,9 @@ with st.sidebar:
 # =========================
 
 st.markdown(
+    """
+    <div style="
+        position: fixed;
         top: 120px;
         left: 50%;
         transform: translateX(-50%);
@@ -30,6 +33,8 @@ st.markdown(
         z-index: 0;
         pointer-events: none;
     ">
+        <img src="assets/wellops_logo.png" width="700">
+    </div>
     """,
     unsafe_allow_html=True
 )
@@ -39,29 +44,14 @@ st.markdown(
 # =========================
 
 st.markdown(
-        """
-        .stApp 
-
-        section[data-testid="stSidebar"] {
-            background-color: #0F172A;
-        }
-
-        button {
-            background-color: #F97316 !important;
-            color: white !important;
-            border-radius: 6px;
-        }
-
-        input, select, textarea {
-            background-color: #111827 !important;
-            color: #F9FAFB !important;
-            border: 1px solid #374151 !important;
-        }
-
-        h1, h2, h3, h4, p, span, label {
-            color: #F9FAFB;
-        }
-   
+    """
+    <style>
+        .stApp { background-color: #0B1220; }
+        section[data-testid="stSidebar"] { background-color: #0F172A; }
+        button { background-color: #F97316 !important; color: white !important; border-radius: 6px; }
+        input, select, textarea { background-color: #111827 !important; color: #F9FAFB !important; border: 1px solid #374151 !important; }
+        h1, h2, h3, h4, p, span, label { color: #F9FAFB; }
+    </style>
     """,
     unsafe_allow_html=True
 )
