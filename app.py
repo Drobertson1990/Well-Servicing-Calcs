@@ -90,82 +90,44 @@ if page == "Home":
 
     st.image(
         "assets/wellops_logo.png",
-        width=260
+        width=280
     )
 
-    st.markdown(
+    components.html(
         """
         <div style="
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 65vh;
+            height: 70vh;
             text-align: center;
         ">
 
             <div style="
-                margin-top: 24px;
-                font-size: 30px;
-                font-weight: 700;
-                color: #F97316;
-                letter-spacing: 1.2px;
+                margin-top: 18px;
+                font-size: 28px;
+                font-weight: 600;
+                color: #FFFFFF;
             ">
                 Plan. Execute. Verify.
             </div>
 
             <div style="
-                margin-top: 18px;
+                margin-top: 16px;
                 max-width: 720px;
                 font-size: 19px;
                 line-height: 1.7;
                 color: #D1D5DB;
             ">
-                Integrated calculations for flow, volumes, and pressure.
-                Purpose-built for coiled tubing and intervention operations.
+                Integrated calculations for flow, volumes, and pressure. 
+                Purpose-built for coiled tubing and intervention operations
             </div>
 
         </div>
         """,
-        unsafe_allow_html=True
+        height=500
     )
-
-st.markdown(
-    """
-    <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 65vh;
-        text-align: center;
-    ">
-
-        <div style="
-            margin-top: 24px;
-            font-size: 30px;
-            font-weight: 700;
-            color: #F97316;
-            letter-spacing: 1.2px;
-        ">
-            Plan. Execute. Verify.
-        </div>
-
-        <div style="
-            margin-top: 18px;
-            max-width: 720px;
-            font-size: 19px;
-            line-height: 1.7;
-            color: #D1D5DB;
-        ">
-            Integrated calculations for flow, volumes, and pressure.
-            Purpose-built for coiled tubing and intervention operations.
-        </div>
-
-    </div>
-    """,
-    unsafe_allow_html=True
-)
     
 # =========================
 # CT STRINGS (FINAL, LOCKABLE)
