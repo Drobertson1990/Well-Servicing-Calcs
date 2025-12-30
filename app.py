@@ -26,8 +26,6 @@ st.set_page_config(
     layout="wide"
 )
 
-add_watermark("assets/wellops_watermark.png")
-
 with st.sidebar:
     st.image("assets/wellops_logo.png", use_column_width=True)
     
