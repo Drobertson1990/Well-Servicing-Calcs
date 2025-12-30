@@ -12,6 +12,22 @@ st.sidebar.image(
     use_column_width=True
 )
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-image: url("assets/wellops_watermark.png");
+        background-repeat: no-repeat;
+        background-position: center 120px;
+        background-size: 700px;
+        background-attachment: fixed;
+        background-color: #0B1220;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # =========================
 # APP STATE (REQUIRED)
 # =========================
