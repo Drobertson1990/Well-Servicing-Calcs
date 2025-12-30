@@ -108,51 +108,51 @@ page = st.sidebar.radio(
 
 if page == "Home":
 
-st.markdown(
-    """
-    <div style="
-        position: relative;
-        z-index: 2;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        margin-top: 120px;
-    ">
-
+    st.markdown(
+        """
         <div style="
-            font-size: 64px;
-            font-weight: 800;
-            color: #00E676;
-            letter-spacing: 1px;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-top: 120px;
         ">
-            WellOps
-        </div>
 
-        <div style="
-            margin-top: 16px;
-            font-size: 26px;
-            font-weight: 600;
-            color: #F9FAFB;
-        ">
-            Standardizing Well Execution
-        </div>
+            <div style="
+                font-size: 64px;
+                font-weight: 800;
+                color: #00E676;
+                letter-spacing: 1px;
+            ">
+                WellOps
+            </div>
 
-        <div style="
-            margin-top: 14px;
-            max-width: 680px;
-            font-size: 18px;
-            line-height: 1.6;
-            color: #D1D5DB;
-        ">
-            Integrated planning tools for safer, more predictable
-            coiled tubing and intervention operations.
-        </div>
+            <div style="
+                margin-top: 16px;
+                font-size: 26px;
+                font-weight: 600;
+                color: #F9FAFB;
+            ">
+                Standardizing Well Execution
+            </div>
 
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            <div style="
+                margin-top: 14px;
+                max-width: 680px;
+                font-size: 18px;
+                line-height: 1.6;
+                color: #D1D5DB;
+            ">
+                Integrated planning tools for safer, more predictable
+                coiled tubing and intervention operations.
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     
 # =========================
 # CT STRINGS (FINAL, LOCKABLE)
