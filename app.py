@@ -14,6 +14,7 @@ st.image(
 
 st.markdown(
     """
+    <style>
     .stApp {
         background-color: #0B1220;
         background-image: url("assets/wellops_logo.png");
@@ -42,6 +43,7 @@ st.markdown(
     h1, h2, h3, h4 {
         color: #F9FAFB;
     }
+    </style>
     """,
     unsafe_allow_html=True
 )
