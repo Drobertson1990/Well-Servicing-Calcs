@@ -15,8 +15,8 @@ def add_watermark(image_path: str):
             background-color: #0B1220;
             background-image: url("data:image/png;base64,{encoded}");
             background-repeat: no-repeat;
-            background-position: center 120px;
-            background-size: 700px;
+            background-position: center 10vh;
+            background-size: min(70vw, 70vh);
             background-attachment: fixed;
         }}
         </style>
