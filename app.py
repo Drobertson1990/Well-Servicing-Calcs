@@ -111,8 +111,6 @@ if page == "Home":
     st.markdown(
         """
         <div style="
-            position: relative;
-            z-index: 2;
             display: flex;
             flex-direction: column;
             align-items: center;
