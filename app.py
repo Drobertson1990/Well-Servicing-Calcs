@@ -15,10 +15,8 @@ st.set_page_config(
 # SIDEBAR BRANDING
 # =========================
 
-st.sidebar.image(
-    "assets/wellops_logo.png",
-    use_column_width=True
-)
+with st.sidebar:
+    st.image("assets/wellops_logo.png", use_column_width=True)
 
 # =========================
 # WATERMARK LOGO
@@ -48,29 +46,29 @@ st.markdown(
 st.markdown(
     """
     <style>
-    .stApp {
-        background-color: #0B1220;
-    }
+        .stApp {
+            background-color: #0B1220;
+        }
 
-    section[data-testid="stSidebar"] {
-        background-color: #0F172A;
-    }
+        section[data-testid="stSidebar"] {
+            background-color: #0F172A;
+        }
 
-    button {
-        background-color: #F97316 !important;
-        color: white !important;
-        border-radius: 6px;
-    }
+        button {
+            background-color: #F97316 !important;
+            color: white !important;
+            border-radius: 6px;
+        }
 
-    input, select, textarea {
-        background-color: #111827 !important;
-        color: #F9FAFB !important;
-        border: 1px solid #374151 !important;
-    }
+        input, select, textarea {
+            background-color: #111827 !important;
+            color: #F9FAFB !important;
+            border: 1px solid #374151 !important;
+        }
 
-    h1, h2, h3, h4, p, span, label {
-        color: #F9FAFB;
-    }
+        h1, h2, h3, h4, p, span, label {
+            color: #F9FAFB;
+        }
     </style>
     """,
     unsafe_allow_html=True
