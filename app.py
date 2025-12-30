@@ -108,10 +108,25 @@ page = st.sidebar.radio(
 
 if page == "Home":
     st.title("Precision Well Operations")
-    st.markdown("""
-    **Integrated calculations for flow, volumes, and pressure**  
-    Purpose-built for coiled tubing and intervention operations.
-    """)
+    st.markdown(
+    """
+    <div style="
+        text-align: center;
+        margin-top: 20vh;
+        z-index: 1;
+        position: relative;
+    ">
+        <h1 style="margin-bottom: 0.5rem;">
+            Precision Well Operations
+        </h1>
+        <p style="font-size: 1.1rem; color: #9CA3AF; max-width: 800px; margin: 0 auto;">
+            Integrated calculations for flow, volumes, and pressure<br>
+            Purpose-built for coiled tubing and intervention operations.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # =========================
 # CT STRINGS (FINAL, LOCKABLE)
