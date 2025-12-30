@@ -2,21 +2,15 @@ import streamlit as st
 import math
 from datetime import datetime
 
-# =========================
-# PAGE CONFIG
-# =========================
-
 st.set_page_config(
     page_title="WellOps",
     layout="wide"
 )
 
-# =========================
-# SIDEBAR BRANDING
-# =========================
-
-with st.sidebar:
-    st.image("assets/wellops_logo.png", use_column_width=True)
+st.sidebar.image(
+    "assets/wellops_logo.png",
+    use_column_width=True
+)
 
 # =========================
 # APP STATE (REQUIRED)
