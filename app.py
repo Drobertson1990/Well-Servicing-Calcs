@@ -107,26 +107,33 @@ page = st.sidebar.radio(
 # =========================
 
 if page == "Home":
-    
     st.markdown(
-    """
-    <div style="
-        text-align: center;
-        margin-top: 20vh;
-        z-index: 1;
-        position: relative;
-    ">
-        <h1 style="margin-bottom: 0.5rem;">
-            Precision Well Operations
-        </h1>
-        <p style="font-size: 1.1rem; color: #9CA3AF; max-width: 800px; margin: 0 auto;">
-            Integrated calculations for flow, volumes, and pressure<br>
-            Purpose-built for coiled tubing and intervention operations.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+        """
+        <div style="text-align: center; margin-top: 40px;">
+            <h1 style="
+                color: #22C55E;
+                font-size: 64px;
+                font-weight: 800;
+                margin-bottom: 10px;
+            ">
+                WellOps
+            </h1>
+            <h3 style="color: #E5E7EB; font-weight: 600; margin-bottom: 8px;">
+                Standardizing Well Execution
+            </h3>
+            <p style="
+                color: #9CA3AF;
+                font-size: 18px;
+                max-width: 720px;
+                margin: 0 auto;
+            ">
+                Integrated planning tools for safer, more predictable
+                coiled tubing and intervention operations.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # =========================
 # CT STRINGS (FINAL, LOCKABLE)
