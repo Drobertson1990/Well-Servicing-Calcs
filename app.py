@@ -1,6 +1,7 @@
 import streamlit as st
 import math
 from datetime import datetime
+st.image("assets/wellops_logo.svg", use_container_width=True)
 
 # =========================
 # STATE
