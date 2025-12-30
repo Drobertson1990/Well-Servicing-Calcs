@@ -5,21 +5,6 @@ import base64
 from pathlib import Path
 import streamlit.components.v1 as components
 
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-color: #000000;
-            background-image: url("data:image/png;base64,{encoded}");
-            background-repeat: no-repeat;
-            background-position: center 10vh;
-            background-size: min(70vw, 70vh);
-            background-attachment: fixed;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
 
 st.set_page_config(
     page_title="WellOps",
@@ -103,7 +88,7 @@ page = st.sidebar.radio(
 
 if page == "Home":
 
-        st.image(
+    st.image(
         "assets/wellops_logo.png",
         width=280
     )
