@@ -1,7 +1,50 @@
 import streamlit as st
 import math
 from datetime import datetime
+st.set_page_config(
+    page_title="WellOps",
+    layout="wide"
+)
+st.image(
+    "assets/wellops_logo.png",
+    use_column_width=True
+)
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0B1220;
+        background-image: url("assets/wellops_logo.png");
+        background-repeat: no-repeat;
+        background-position: center 120px;
+        background-size: 800px;
+        background-attachment: fixed;
+    }
+
+    section[data-testid="stSidebar"] {
+        background-color: #0F172A;
+    }
+
+    button {
+        background-color: #F97316 !important;
+        color: white !important;
+        border-radius: 6px;
+    }
+
+    input, select, textarea {
+        background-color: #111827 !important;
+        color: #F9FAFB !important;
+        border: 1px solid #374151 !important;
+    }
+
+    h1, h2, h3, h4 {
+        color: #F9FAFB;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # =========================
 # STATE
 # =========================
@@ -45,17 +88,6 @@ job = st.session_state.job
 # =========================
 # APP CONFIG
 # =========================
-
-st.set_page_config(
-
-    st.image(
-    "assets/wellops_logo.png",
-    use_column_width=True
-)
-
-    page_title="Well Servicing Calculator",
-    layout="wide"
-)
 
 # =========================
 # NAVIGATION
