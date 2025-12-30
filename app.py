@@ -119,7 +119,7 @@ if page == "Home":
                 font-weight: 600;
                 color: #FFFFFF;
             ">
-                WellOps: Plan. Execute. Verify.
+                Plan. Execute. Verify.
 
             <div style="
                 margin-top: 16px;
@@ -128,7 +128,8 @@ if page == "Home":
                 line-height: 1.7;
                 color: #D1D5DB;
             ">
-                Integrated calculations for flow, volumes, and pressure
+                Integrated calculations for flow, volumes, and pressure.
+                
 Purpose-built for coiled tubing and intervention operations
             </div>
 
