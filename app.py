@@ -7,11 +7,6 @@ st.set_page_config(
     layout="wide"
 )
 
-st.image(
-    "assets/wellops_logo.png",
-    use_column_width=True
-)
-
 st.markdown(
     """
     <style>
