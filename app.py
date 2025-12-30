@@ -107,29 +107,48 @@ page = st.sidebar.radio(
 # =========================
 
 if page == "Home":
+
     st.markdown(
         """
-        <div style="text-align: center; margin-top: 40px;">
-            <h1 style="
-                color: #00E676;
+        <div style="
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-top: 120px;
+        ">
+
+            <div style="
                 font-size: 64px;
                 font-weight: 800;
-                margin-bottom: 10px;
+                color: #00E676;
+                letter-spacing: 1px;
             ">
                 WellOps
-            </h1>
-            <h3 style="color: #E5E7EB; font-weight: 600; margin-bottom: 8px;">
+            </div>
+
+            <div style="
+                margin-top: 16px;
+                font-size: 26px;
+                font-weight: 600;
+                color: #F9FAFB;
+            ">
                 Standardizing Well Execution
-            </h3>
-            <p style="
-                color: #9CA3AF;
+            </div>
+
+            <div style="
+                margin-top: 14px;
+                max-width: 680px;
                 font-size: 18px;
-                max-width: 720px;
-                margin: 0 auto;
+                line-height: 1.6;
+                color: #D1D5DB;
             ">
                 Integrated planning tools for safer, more predictable
                 coiled tubing and intervention operations.
-            </p>
+            </div>
+
         </div>
         """,
         unsafe_allow_html=True
