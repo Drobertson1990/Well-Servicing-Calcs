@@ -107,7 +107,7 @@ page = st.sidebar.radio(
 # =========================
 
 if page == "Home":
-    st.title("Precision Well Operations")
+    
     st.markdown(
     """
     <div style="
