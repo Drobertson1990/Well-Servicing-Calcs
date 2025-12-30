@@ -85,7 +85,7 @@ page = st.sidebar.radio(
 # =========================
 
 if page == "Home":
-    st.title("Well Servicing Calculator")
+    st.title("WellOps - Presision Well Management")
     st.markdown("""
     **Field-ready engineering calculations**  
     Built for coiled tubing, service rigs, and snubbing.
