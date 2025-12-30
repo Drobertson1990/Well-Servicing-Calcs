@@ -1,33 +1,39 @@
 import streamlit as st
 import math
 from datetime import datetime
+import base64
+from pathlib import Path
+
+def add_watermark(image_path: str):
+    img_bytes = Path(image_path).read_bytes()
+    encoded = base64.b64encode(img_bytes).decode()
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: #0B1220;
+            background-image: url("data:image/png;base64,{encoded}");
+            background-repeat: no-repeat;
+            background-position: center 120px;
+            background-size: 700px;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 st.set_page_config(
     page_title="WellOps",
     layout="wide"
 )
 
+add_watermark("assets/wellops_watermark.png")
+
 st.sidebar.image(
     "assets/wellops_logo.png",
     use_column_width=True
-)
-
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-image: url("assets/wellops_watermark.png");
-        background-repeat: no-repeat;
-        background-position: center 120px;
-        background-size: 700px;
-        background-attachment: fixed;
-        background-color: #0B1220;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # =========================
 # APP STATE (REQUIRED)
 # =========================
