@@ -11,25 +11,6 @@ st.sidebar.image(
     "assets/wellops_logo.png",
     use_column_width=True
 )
-
-st.markdown(  # watermark logo
-    """
-    <div style="position: fixed; top: 120px; left: 50%; transform: translateX(-50%);
-                opacity: 0.06; z-index: 0; pointer-events: none;">
-        <img src="assets/wellops_logo.png" width="700">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(  # THEME CSS
-    """
-    <style>
-        ...
-    </style>
-    """,
-    unsafe_allow_html=True
-)
     
 # =========================
 # STATE
