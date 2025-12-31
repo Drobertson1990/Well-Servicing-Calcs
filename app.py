@@ -461,85 +461,93 @@ elif page == "Flow & Velocity":
 
     # --- Active CT OD (OD constant across string) ---
     ct = job["ct"]["strings"][job["ct"]["active_index"]]
-    # Assumption: OD is constant; take OD from first section
     ct_od_mm = ct["sections"][0]["od"]
     ct_od_m = ct_od_mm / 1000.0
-
-    # --- Determine casing at depth ---
-    casing_at_depth = next(
-        (c for c in job["well"]["casing"] if c["top"] <= depth_m <= c["bottom"]),
-        None
-    )
 
     if depth_m <= 0 or rate_m3_min <= 0:
         st.info("Enter Depth and Pump rate to calculate annular velocity and bottoms-up time.")
         st.stop()
 
+    # --- Determine casing at depth (for point velocity) ---
+    casing_at_depth = next(
+        (c for c in job["well"]["casing"] if c["top"] <= depth_m <= c["bottom"]),
+        None
+    )
     if casing_at_depth is None:
         st.warning("No casing section covers this depth. Check casing top/bottom depths in Well / Job.")
         st.stop()
 
-    casing_id_m = (casing_at_depth["id"] / 1000.0)
-
-    # --- Annular area at depth ---
+    casing_id_m = casing_at_depth["id"] / 1000.0
     ann_area_m2 = math.pi * ((casing_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
-
     if ann_area_m2 <= 0:
         st.error("Annular area is ≤ 0. Check casing ID vs CT OD.")
         st.stop()
 
-    # --- Annular velocity ---
-    vel_m_per_min = rate_m3_min / ann_area_m2
+    vel_at_depth = rate_m3_min / ann_area_m2
 
-    # --- Bottoms-up time (annular volume to depth / rate) ---
-    # Compute annular volume from surface to the entered depth, honoring multiple casing sizes
-    vol_to_depth_m3 = 0.0
-    remaining = depth_m
-
-    # Sort casing by top depth
+    # --- Segment velocities + length-weighted average to depth ---
     casing_sorted = sorted(job["well"]["casing"], key=lambda x: x["top"])
 
-    for c in casing_sorted:
-        seg_top = c["top"]
-        seg_bot = c["bottom"]
+    segment_rows = []
+    total_len = 0.0
+    vel_len_sum = 0.0  # for length-weighted average
+    vol_to_depth_m3 = 0.0  # for BU time
 
-        # Skip segments above surface or invalid
-        if seg_bot <= 0 or seg_bot <= seg_top:
+    for c in casing_sorted:
+        seg_top = max(0.0, float(c["top"]))
+        seg_bot = float(c["bottom"])
+
+        if seg_bot <= seg_top:
             continue
 
-        # Only count portion from 0 to depth
-        seg_start = max(0.0, seg_top)
+        # Only count portion from 0 -> depth_m
+        seg_start = seg_top
         seg_end = min(depth_m, seg_bot)
 
         if seg_end <= seg_start:
             continue
 
         seg_len = seg_end - seg_start
-        seg_id_m = c["id"] / 1000.0
+        seg_id_m = float(c["id"]) / 1000.0
+
         seg_ann_area = math.pi * ((seg_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
+        if seg_ann_area <= 0:
+            continue
 
-        if seg_ann_area > 0:
-            vol_to_depth_m3 += seg_ann_area * seg_len
+        seg_vel = rate_m3_min / seg_ann_area
 
-    if rate_m3_min > 0:
-        bottoms_up_min = vol_to_depth_m3 / rate_m3_min
-    else:
-        bottoms_up_min = None
+        segment_rows.append({
+            "From (m)": round(seg_start, 1),
+            "To (m)": round(seg_end, 1),
+            "Casing ID (mm)": round(float(c["id"]), 1),
+            "Velocity (m/min)": round(seg_vel, decimals),
+            "Length (m)": round(seg_len, 1),
+        })
+
+        total_len += seg_len
+        vel_len_sum += seg_vel * seg_len
+        vol_to_depth_m3 += seg_ann_area * seg_len
+
+    avg_vel_to_depth = (vel_len_sum / total_len) if total_len > 0 else None
+    bottoms_up_min = (vol_to_depth_m3 / rate_m3_min) if rate_m3_min > 0 else None
 
     # --- Output ---
     st.subheader("Results")
 
-    colA, colB = st.columns(2)
-    with colA:
-        st.success(f"Annular velocity: {vel_m_per_min:.{decimals}f} m/min")
-        st.caption(f"Using casing ID {casing_at_depth['id']} mm and CT OD {ct_od_mm} mm at depth {depth_m:.0f} m.")
-    with colB:
-        if bottoms_up_min is not None:
-            st.success(f"Bottoms-up time to {depth_m:.0f} m: {bottoms_up_min:.{decimals}f} min")
-            st.caption("Calculated from annular volume (surface → depth) ÷ pump rate.")
-        else:
-            st.info("Bottoms-up time not available.")
+    st.success(f"Annular velocity at {depth_m:.0f} m: {vel_at_depth:.{decimals}f} m/min")
+    st.caption(f"At depth uses casing ID {casing_at_depth['id']} mm and CT OD {ct_od_mm} mm.")
 
+    if segment_rows:
+        st.markdown("**Velocity by casing section (surface → depth):**")
+        st.dataframe(segment_rows, use_container_width=True, hide_index=True)
+
+        if avg_vel_to_depth is not None:
+            st.success(f"Average annular velocity (length-weighted) to {depth_m:.0f} m: {avg_vel_to_depth:.{decimals}f} m/min")
+            st.caption("Length-weighted across casing sections from surface to entered depth.")
+
+    if bottoms_up_min is not None:
+        st.success(f"Bottoms-up time to {depth_m:.0f} m: {bottoms_up_min:.{decimals}f} min")
+        st.caption("Calculated from annular volume (surface → depth) ÷ pump rate.")
 # =========================
 # Volumes
 # =========================
