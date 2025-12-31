@@ -82,6 +82,10 @@ page = st.sidebar.radio(
     }[x]
 )
 
+if "page_override" in st.session_state:
+    page = st.session_state.page_override
+    del st.session_state.page_override
+
 # =========================
 # HOME
 # =========================
@@ -130,6 +134,17 @@ if page == "Home":
         """,
         height=500
     )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    c1, c2, c3 = st.columns([1, 1, 1])
+
+    with c2:
+        if st.button("🟧 Start New Job", use_container_width=True):
+            st.session_state.page_override = "Well / Job"
+
+        if st.button("Open Saved Job", use_container_width=True):
+            st.info("Saved jobs coming next.")
     
 # =========================
 # CT STRINGS (FINAL, LOCKABLE)
