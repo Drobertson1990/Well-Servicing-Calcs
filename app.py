@@ -554,6 +554,7 @@ elif page == "Flow & Velocity":
                     st.markdown(f"<div style='font-size: 26px; font-weight: 800; color: #F9FAFB;'>"
                                 f"{s['vel']:.{decimals}f} m/min</div>", unsafe_allow_html=True)
                     st.write(f"Length: **{s['len']:.0f} m**")
+                    
         if avg_vel_to_depth is not None:
             st.success(f"Average annular velocity (length-weighted) to {depth_m:.0f} m: {avg_vel_to_depth:.{decimals}f} m/min")
 
