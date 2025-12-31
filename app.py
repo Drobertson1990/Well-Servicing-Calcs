@@ -606,29 +606,18 @@ elif page == "Volumes":
     ct_od_m = float(ct["sections"][0]["od"]) / 1000.0
     ct_od_area = math.pi * (ct_od_m / 2.0) ** 2
 
-    # Total CT length available
-    ct_total_len = sum(float(s["length"]) for s in ct["sections"])
+    # --- Total CT length + TOTAL CT internal volume (full string) ---
+    ct_total_len = 0.0
+    ct_internal_total_m3 = 0.0
 
-    # =========================
-    # Helper: CT internal volume to a depth (honors variable wall thickness)
-    # =========================
-    def ct_internal_to_depth(depth_m: float) -> float:
-        remaining = min(depth_m, ct_total_len)
-        vol = 0.0
+    for sec in ct["sections"]:
+        sec_len = float(sec["length"])
+        ct_total_len += sec_len
 
-        for sec in ct["sections"]:
-            if remaining <= 0:
-                break
-
-            sec_len = min(float(sec["length"]), remaining)
-            remaining -= sec_len
-
-            id_mm = float(sec["od"]) - 2.0 * float(sec["wall"])
-            id_m = max(id_mm, 0.0) / 1000.0
-            area = math.pi * (id_m / 2.0) ** 2
-            vol += area * sec_len
-
-        return vol
+        id_mm = float(sec["od"]) - 2.0 * float(sec["wall"])
+        id_m = max(id_mm, 0.0) / 1000.0
+        area = math.pi * (id_m / 2.0) ** 2
+        ct_internal_total_m3 += area * sec_len
 
     # =========================
     # Helper: Hole + Annular volume to a depth (segmented casing)
@@ -651,7 +640,6 @@ elif page == "Volumes":
 
             seg_len = seg_end - seg_start
             casing_id_m = float(c["id"]) / 1000.0
-
             casing_area = math.pi * (casing_id_m / 2.0) ** 2
 
             hole_m3 += casing_area * seg_len
@@ -667,21 +655,21 @@ elif page == "Volumes":
     # =========================
     depth_A = td
 
-    ct_internal_A = ct_internal_to_depth(depth_A)
     hole_A, ann_A = hole_and_annular_to_depth(depth_A)
 
+    # CT displacement depends on how much CT is actually in hole
     ct_run_len_A = min(depth_A, ct_total_len)
     ct_displacement_A = ct_od_area * ct_run_len_A
 
-    total_circ_A = ct_internal_A + ann_A
+    total_circ_A = ct_internal_total_m3 + ann_A
 
     st.subheader("A — Volumes to TD")
 
-    st.success(f"CT Internal Volume: {m3_to_unit(ct_internal_A):.{decimals}f} {unit_label()}")
-    st.success(f"CT Displacement: {m3_to_unit(ct_displacement_A):.{decimals}f} {unit_label()}")
+    st.success(f"CT Internal Volume (total string): {m3_to_unit(ct_internal_total_m3):.{decimals}f} {unit_label()}")
+    st.success(f"CT Displacement (to TD): {m3_to_unit(ct_displacement_A):.{decimals}f} {unit_label()}")
     st.success(f"Annular Volume (to TD): {m3_to_unit(ann_A):.{decimals}f} {unit_label()}")
     st.success(f"Hole Volume (to TD): {m3_to_unit(hole_A):.{decimals}f} {unit_label()}")
-    st.success(f"Total Circulating Volume: {m3_to_unit(total_circ_A):.{decimals}f} {unit_label()}")
+    st.success(f"Total Circulating Volume (to TD): {m3_to_unit(total_circ_A):.{decimals}f} {unit_label()}")
 
     # =========================
     # B (Precise): Volumes to Specific Depth
@@ -698,18 +686,17 @@ elif page == "Volumes":
         if not valid_depth:
             st.info("Enter a valid depth within TD.")
         else:
-            ct_internal_B = ct_internal_to_depth(depth_B)
             hole_B, ann_B = hole_and_annular_to_depth(depth_B)
 
             ct_run_len_B = min(depth_B, ct_total_len)
             ct_displacement_B = ct_od_area * ct_run_len_B
 
-            total_circ_B = ct_internal_B + ann_B
+            total_circ_B = ct_internal_total_m3 + ann_B
 
             st.markdown("### Volumes to Depth")
             st.write(f"Depth: **{depth_B:.0f} m**")
 
-            st.success(f"CT Internal Volume: {m3_to_unit(ct_internal_B):.{decimals}f} {unit_label()}")
+            st.success(f"CT Internal Volume (total string): {m3_to_unit(ct_internal_total_m3):.{decimals}f} {unit_label()}")
             st.success(f"CT Displacement: {m3_to_unit(ct_displacement_B):.{decimals}f} {unit_label()}")
             st.success(f"Annular Volume: {m3_to_unit(ann_B):.{decimals}f} {unit_label()}")
             st.success(f"Hole Volume: {m3_to_unit(hole_B):.{decimals}f} {unit_label()}")
