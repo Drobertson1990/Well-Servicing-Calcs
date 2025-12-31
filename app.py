@@ -540,7 +540,7 @@ elif page == "Flow & Velocity":
     if segments:
         st.markdown("### Velocity by casing section (surface → depth)")
 
-                for i, s in enumerate(segments, start=1):
+        for i, s in enumerate(segments, start=1):
             with st.container(border=True):
                 left, right = st.columns([1, 1])
 
@@ -557,9 +557,12 @@ elif page == "Flow & Velocity":
                         unsafe_allow_html=True
                     )
                     st.write(f"Length: **{s['len']:.0f} m**")
-                    
+
         if avg_vel_to_depth is not None:
-            st.success(f"Average annular velocity (length-weighted) to {depth_m:.0f} m: {avg_vel_to_depth:.{decimals}f} m/min")
+            st.success(
+                f"Average annular velocity (length-weighted) to {depth_m:.0f} m: "
+                f"{avg_vel_to_depth:.{decimals}f} m/min"
+            )
 
     if bottoms_up_min is not None:
         st.success(f"Bottoms-up time to {depth_m:.0f} m: {bottoms_up_min:.{decimals}f} min")
