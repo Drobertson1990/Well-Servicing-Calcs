@@ -488,10 +488,10 @@ elif page == "Flow & Velocity":
     # --- Segment velocities + length-weighted average to depth ---
     casing_sorted = sorted(job["well"]["casing"], key=lambda x: x["top"])
 
-    segment_rows = []
+    segments = []
     total_len = 0.0
-    vel_len_sum = 0.0  # for length-weighted average
-    vol_to_depth_m3 = 0.0  # for BU time
+    vel_len_sum = 0.0
+    vol_to_depth_m3 = 0.0
 
     for c in casing_sorted:
         seg_top = max(0.0, float(c["top"]))
@@ -500,7 +500,6 @@ elif page == "Flow & Velocity":
         if seg_bot <= seg_top:
             continue
 
-        # Only count portion from 0 -> depth_m
         seg_start = seg_top
         seg_end = min(depth_m, seg_bot)
 
@@ -516,12 +515,12 @@ elif page == "Flow & Velocity":
 
         seg_vel = rate_m3_min / seg_ann_area
 
-        segment_rows.append({
-            "From (m)": round(seg_start, 1),
-            "To (m)": round(seg_end, 1),
-            "Casing ID (mm)": round(float(c["id"]), 1),
-            "Velocity (m/min)": round(seg_vel, decimals),
-            "Length (m)": round(seg_len, 1),
+        segments.append({
+            "from": seg_start,
+            "to": seg_end,
+            "len": seg_len,
+            "id_mm": float(c["id"]),
+            "vel": seg_vel
         })
 
         total_len += seg_len
@@ -537,13 +536,24 @@ elif page == "Flow & Velocity":
     st.success(f"Annular velocity at {depth_m:.0f} m: {vel_at_depth:.{decimals}f} m/min")
     st.caption(f"At depth uses casing ID {casing_at_depth['id']} mm and CT OD {ct_od_mm} mm.")
 
-    if segment_rows:
-        st.markdown("**Velocity by casing section (surface → depth):**")
-        st.dataframe(segment_rows, use_container_width=True, hide_index=True)
+    # --- Compact mobile-friendly segment cards ---
+    if segments:
+        st.markdown("### Velocity by casing section (surface → depth)")
+
+        for i, s in enumerate(segments, start=1):
+            with st.container(border=True):
+                cA, cB, cC = st.columns(3)
+                cA.metric("Section", f"{i}")
+                cB.metric("Depth", f"{s['from']:.0f}–{s['to']:.0f} m")
+                cC.metric("Casing ID", f"{s['id_mm']:.1f} mm")
+
+                cD, cE, cF = st.columns(3)
+                cD.metric("Velocity", f"{s['vel']:.{decimals}f} m/min")
+                cE.metric("Length", f"{s['len']:.0f} m")
+                cF.metric("Share", f"{(s['len']/total_len*100):.0f}%")
 
         if avg_vel_to_depth is not None:
             st.success(f"Average annular velocity (length-weighted) to {depth_m:.0f} m: {avg_vel_to_depth:.{decimals}f} m/min")
-            st.caption("Length-weighted across casing sections from surface to entered depth.")
 
     if bottoms_up_min is not None:
         st.success(f"Bottoms-up time to {depth_m:.0f} m: {bottoms_up_min:.{decimals}f} min")
