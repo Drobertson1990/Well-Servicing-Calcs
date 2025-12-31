@@ -54,6 +54,67 @@ if "job" not in st.session_state:
 
 job = st.session_state.job
 
+def apply_theme(settings: dict):
+    theme = settings.get("theme", "dark")
+    accent = settings.get("accent_color", "#F97316")  # default orange
+
+    if theme == "light":
+        bg = "#F8FAFC"
+        sidebar_bg = "#FFFFFF"
+        text = "#0F172A"
+        input_bg = "#FFFFFF"
+        border = "#CBD5E1"
+    else:
+        bg = "#000000"
+        sidebar_bg = "#0B1220"
+        text = "#F9FAFB"
+        input_bg = "#111827"
+        border = "#374151"
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-color: {bg};
+        }}
+
+        section[data-testid="stSidebar"] {{
+            background-color: {sidebar_bg};
+        }}
+
+        button {{
+            background-color: {accent} !important;
+            color: white !important;
+            border-radius: 8px !important;
+            border: 0 !important;
+        }}
+
+        input, select, textarea {{
+            background-color: {input_bg} !important;
+            color: {text} !important;
+            border: 1px solid {border} !important;
+        }}
+
+        h1, h2, h3, h4, p, span, label, div {{
+            color: {text};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Defaults if missing (safe upgrade path)
+job["settings"].setdefault("theme", "dark")
+job["settings"].setdefault("accent_color", "#F97316")
+job["settings"].setdefault("length_unit", "m")
+job["settings"].setdefault("pressure_unit", "kPa")
+job["settings"].setdefault("rate_unit", "m³/min")
+job["settings"].setdefault("volume_unit", "m³")
+job["settings"].setdefault("force_unit", "daN")
+job["settings"].setdefault("decimals", 2)
+
+apply_theme(job["settings"])
+
 # =========================
 # NAVIGATION
 # =========================
@@ -722,9 +783,65 @@ elif page == "Pressure":
 # =========================
 
 elif page == "Settings":
-    st.header("Settings")
-    job["settings"]["theme"] = st.selectbox(
-        "Theme",
-        ["dark", "light"],
-        index=0 if job["settings"]["theme"] == "dark" else 1
-    )
+
+    st.header("⚙️ Settings")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        job["settings"]["theme"] = st.selectbox(
+            "Theme",
+            ["dark", "light"],
+            index=0 if job["settings"]["theme"] == "dark" else 1
+        )
+
+        job["settings"]["accent_color"] = st.selectbox(
+            "Accent colour",
+            ["#F97316  (Orange)", "#00E676  (Neon Green)", "#3B82F6  (Blue)"],
+            index=0 if job["settings"]["accent_color"] == "#F97316" else
+                  1 if job["settings"]["accent_color"] == "#00E676" else 2
+        ).split()[0]  # grab hex only
+
+        job["settings"]["decimals"] = st.slider(
+            "Decimal places",
+            min_value=0,
+            max_value=4,
+            value=int(job["settings"]["decimals"])
+        )
+
+    with col2:
+        st.subheader("Units (future-proofed)")
+
+        job["settings"]["length_unit"] = st.selectbox(
+            "Length",
+            ["m", "ft"],
+            index=0 if job["settings"]["length_unit"] == "m" else 1
+        )
+
+        job["settings"]["pressure_unit"] = st.selectbox(
+            "Pressure",
+            ["kPa", "psi"],
+            index=0 if job["settings"]["pressure_unit"] == "kPa" else 1
+        )
+
+        job["settings"]["rate_unit"] = st.selectbox(
+            "Pump rate",
+            ["m³/min", "L/min", "bbl/min"],
+            index=["m³/min", "L/min", "bbl/min"].index(job["settings"]["rate_unit"])
+        )
+
+        job["settings"]["volume_unit"] = st.selectbox(
+            "Volume",
+            ["m³", "L", "bbl"],
+            index=["m³", "L", "bbl"].index(job["settings"]["volume_unit"])
+        )
+
+        job["settings"]["force_unit"] = st.selectbox(
+            "Pull / Force",
+            ["daN", "lbf"],
+            index=0 if job["settings"]["force_unit"] == "daN" else 1
+        )
+
+    st.divider()
+    st.info("Settings apply immediately. Units conversion will be wired page-by-page next.")
+    apply_theme(job["settings"])
