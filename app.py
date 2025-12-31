@@ -551,8 +551,11 @@ elif page == "Flow & Velocity":
 
                 with right:
                     st.markdown("**Velocity**")
-                    st.markdown(f"<div style='font-size: 26px; font-weight: 800; color: #F9FAFB;'>"
-                                f"{s['vel']:.{decimals}f} m/min</div>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div style='font-size: 26px; font-weight: 800; color: #F9FAFB;'>"
+                        f"{s['vel']:.{decimals}f} m/min</div>",
+                        unsafe_allow_html=True
+                    )
                     st.write(f"Length: **{s['len']:.0f} m**")
                     
         if avg_vel_to_depth is not None:
