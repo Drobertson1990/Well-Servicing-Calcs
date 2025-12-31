@@ -428,90 +428,117 @@ elif page == "Well / Job":
 # =========================
 
 elif page == "Flow & Velocity":
-    st.header("Flow & Annular Velocity")
 
-    if (
-        job["ct"]["active_index"] is None
-        or not job["ct"]["strings"][job["ct"]["active_index"]]["sections"]
-        or not job["well"]["casing"]
-    ):
-        st.info("Define CT string and well geometry first.")
+    st.header("🌀 Flow & Velocity")
+
+    # --- Guardrails ---
+    if job["ct"]["active_index"] is None or not job["ct"]["strings"]:
+        st.info("Select an active CT string first (CT Strings page).")
+        st.stop()
+
+    if not job["well"]["casing"]:
+        st.info("Add casing geometry first (Well / Job page).")
+        st.stop()
+
+    # --- Settings ---
+    rate_unit = job["settings"].get("rate_unit", "m³/min")
+    decimals = int(job["settings"].get("decimals", 2))
+
+    # --- Inputs ---
+    col1, col2 = st.columns(2)
+    with col1:
+        depth_m = st.number_input("Depth (m)", min_value=0.0, value=0.0, placeholder="Enter depth")
+    with col2:
+        rate_in = st.number_input(f"Pump rate ({rate_unit})", min_value=0.0, value=0.0, placeholder="Enter pump rate")
+
+    # --- Convert rate -> m³/min ---
+    if rate_unit == "L/min":
+        rate_m3_min = rate_in / 1000.0
+    elif rate_unit == "bbl/min":
+        rate_m3_min = rate_in * 0.158987294928  # bbl -> m³
     else:
-        ct = job["ct"]["strings"][job["ct"]["active_index"]]
-        ct_od_m = ct["sections"][0]["od"] / 1000  # OD constant
+        rate_m3_min = rate_in
 
-        col1, col2 = st.columns(2)
+    # --- Active CT OD (OD constant across string) ---
+    ct = job["ct"]["strings"][job["ct"]["active_index"]]
+    # Assumption: OD is constant; take OD from first section
+    ct_od_mm = ct["sections"][0]["od"]
+    ct_od_m = ct_od_mm / 1000.0
 
-        with col1:
-            depth_input = st.text_input("Depth (m)")
-        with col2:
-            rate_input = st.text_input("Pump rate (m³/min)")
+    # --- Determine casing at depth ---
+    casing_at_depth = next(
+        (c for c in job["well"]["casing"] if c["top"] <= depth_m <= c["bottom"]),
+        None
+    )
 
-        try:
-            depth = float(depth_input)
-            pump_rate = float(rate_input)
-            valid = depth > 0 and pump_rate > 0
-        except (ValueError, TypeError):
-            valid = False
+    if depth_m <= 0 or rate_m3_min <= 0:
+        st.info("Enter Depth and Pump rate to calculate annular velocity and bottoms-up time.")
+        st.stop()
 
-        if not valid:
-            st.info("Enter valid depth and pump rate to calculate velocity.")
+    if casing_at_depth is None:
+        st.warning("No casing section covers this depth. Check casing top/bottom depths in Well / Job.")
+        st.stop()
+
+    casing_id_m = (casing_at_depth["id"] / 1000.0)
+
+    # --- Annular area at depth ---
+    ann_area_m2 = math.pi * ((casing_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
+
+    if ann_area_m2 <= 0:
+        st.error("Annular area is ≤ 0. Check casing ID vs CT OD.")
+        st.stop()
+
+    # --- Annular velocity ---
+    vel_m_per_min = rate_m3_min / ann_area_m2
+
+    # --- Bottoms-up time (annular volume to depth / rate) ---
+    # Compute annular volume from surface to the entered depth, honoring multiple casing sizes
+    vol_to_depth_m3 = 0.0
+    remaining = depth_m
+
+    # Sort casing by top depth
+    casing_sorted = sorted(job["well"]["casing"], key=lambda x: x["top"])
+
+    for c in casing_sorted:
+        seg_top = c["top"]
+        seg_bot = c["bottom"]
+
+        # Skip segments above surface or invalid
+        if seg_bot <= 0 or seg_bot <= seg_top:
+            continue
+
+        # Only count portion from 0 to depth
+        seg_start = max(0.0, seg_top)
+        seg_end = min(depth_m, seg_bot)
+
+        if seg_end <= seg_start:
+            continue
+
+        seg_len = seg_end - seg_start
+        seg_id_m = c["id"] / 1000.0
+        seg_ann_area = math.pi * ((seg_id_m / 2) ** 2 - (ct_od_m / 2) ** 2)
+
+        if seg_ann_area > 0:
+            vol_to_depth_m3 += seg_ann_area * seg_len
+
+    if rate_m3_min > 0:
+        bottoms_up_min = vol_to_depth_m3 / rate_m3_min
+    else:
+        bottoms_up_min = None
+
+    # --- Output ---
+    st.subheader("Results")
+
+    colA, colB = st.columns(2)
+    with colA:
+        st.success(f"Annular velocity: {vel_m_per_min:.{decimals}f} m/min")
+        st.caption(f"Using casing ID {casing_at_depth['id']} mm and CT OD {ct_od_mm} mm at depth {depth_m:.0f} m.")
+    with colB:
+        if bottoms_up_min is not None:
+            st.success(f"Bottoms-up time to {depth_m:.0f} m: {bottoms_up_min:.{decimals}f} min")
+            st.caption("Calculated from annular volume (surface → depth) ÷ pump rate.")
         else:
-            st.subheader("Annular Velocity by Casing Section")
-
-            total_annular_volume = 0.0
-            velocity_volume_sum = 0.0
-            point_velocity = None
-
-            for c in job["well"]["casing"]:
-                section_length = c["bottom"] - c["top"]
-                casing_id_m = c["id"] / 1000
-
-                ann_area = math.pi * (
-                    (casing_id_m / 2) ** 2 - (ct_od_m / 2) ** 2
-                )
-
-                if ann_area <= 0:
-                    st.error(
-                        f"Invalid annulus for casing ID {c['id']} mm"
-                    )
-                    continue
-
-                velocity = pump_rate / ann_area
-                section_volume = ann_area * section_length
-
-                total_annular_volume += section_volume
-                velocity_volume_sum += velocity * section_volume
-
-                if c["top"] <= depth <= c["bottom"]:
-                    point_velocity = velocity
-
-                st.write(
-                    f"{c['id']} mm casing | "
-                    f"{c['top']:.0f}–{c['bottom']:.0f} m | "
-                    f"Velocity: {velocity:.2f} m/min"
-                )
-
-            avg_velocity = velocity_volume_sum / total_annular_volume
-            bottoms_up_time = total_annular_volume / pump_rate
-
-            st.markdown("---")
-            st.subheader("Results")
-
-            if point_velocity is not None:
-                st.success(
-                    f"Annular Velocity at {depth:.0f} m: "
-                    f"{point_velocity:.2f} m/min"
-                )
-            else:
-                st.warning("Depth is outside defined casing sections.")
-
-            st.success(
-                f"Average Annular Velocity: {avg_velocity:.2f} m/min"
-            )
-            st.success(
-                f"Bottoms Up Time: {bottoms_up_time:.1f} minutes"
-            )
+            st.info("Bottoms-up time not available.")
 
 # =========================
 # Volumes
