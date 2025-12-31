@@ -802,55 +802,94 @@ elif page == "Fluids":
 
 elif page == "Pressure":
 
-    st.header("📉 Hydrostatic Pressure")
+    st.header("📉 Pressure — Hydrostatic")
 
-    # --- Preconditions ---
-    if job["well"]["tvd"] is None:
-        st.warning("TVD not set in Well / Job page.")
-        st.stop()
+    # --- Settings ---
+    pressure_unit = job["settings"].get("pressure_unit", "kPa")
+    decimals = int(job["settings"].get("decimals", 2))
 
-    if job["fluids"].get("blended_density") is None:
-        st.warning("Blended fluid density not set in Fluids page.")
-        st.stop()
+    # --- Pull blended density from Fluids page (supports common keys) ---
+    blended_density = (
+        job.get("fluids", {}).get("blended_density_kg_m3")
+        or job.get("fluids", {}).get("blended_density")
+        or job.get("fluids", {}).get("density")
+    )
+
+    # --- Default TVD from Well / Job ---
+    default_tvd = job.get("well", {}).get("tvd")
 
     # --- Inputs ---
-    st.subheader("Inputs")
+    col1, col2 = st.columns(2)
 
-    use_override = st.checkbox("Override depth")
+    with col1:
+        st.subheader("Depth")
+        use_tvd = st.checkbox("Use TVD from Well / Job", value=True)
 
-    if use_override:
-        depth = st.number_input(
-            "Depth used for calculation (m)",
-            min_value=0.0
-        )
+        if use_tvd and default_tvd is not None:
+            depth_m = st.number_input(
+                "TVD (m)",
+                value=float(default_tvd),
+                min_value=0.0
+            )
+        else:
+            depth_m = st.number_input(
+                "Depth (m)",
+                value=0.0,
+                min_value=0.0,
+                placeholder="Enter depth"
+            )
+
+    with col2:
+        st.subheader("Fluid Density")
+        use_blended = st.checkbox("Use blended density from Fluids", value=True)
+
+        if use_blended and blended_density is not None:
+            rho = st.number_input(
+                "Density (kg/m³)",
+                value=float(blended_density),
+                min_value=0.0
+            )
+        else:
+            rho = st.number_input(
+                "Density (kg/m³)",
+                value=0.0,
+                min_value=0.0,
+                placeholder="Enter density"
+            )
+
+    # --- Guidance if missing sources ---
+    if use_tvd and default_tvd is None:
+        st.warning("No TVD set in Well / Job. Either set TVD there or uncheck 'Use TVD' and enter a depth.")
+
+    if use_blended and blended_density is None:
+        st.warning("No blended density set in Fluids. Either set it in Fluids or uncheck 'Use blended density' and enter a density.")
+
+    # --- Calculate ---
+    if depth_m > 0 and rho > 0:
+        g = 9.80665  # m/s²
+        p_pa = rho * g * depth_m  # Pascals
+
+        # Convert pressure
+        if pressure_unit == "psi":
+            p_out = p_pa / 6894.757293168
+            unit = "psi"
+        else:
+            p_out = p_pa / 1000.0
+            unit = "kPa"
+
+        # Gradient (optional but useful)
+        grad_kpa_m = (rho * g) / 1000.0
+        grad_psi_ft = (rho * g) / 6894.757293168 / 3.280839895
+
+        st.subheader("Results")
+        st.success(f"Hydrostatic pressure: {p_out:.{decimals}f} {unit}")
+
+        with st.expander("Show gradients"):
+            st.write(f"Gradient: **{grad_kpa_m:.{decimals}f} kPa/m**")
+            st.write(f"Gradient: **{grad_psi_ft:.{decimals}f} psi/ft**")
+
     else:
-        depth = job["well"]["tvd"]
-        st.info(f"Using TVD from Well / Job: {depth} m")
-
-    density = job["fluids"]["blended_density"]
-    st.write(f"Blended fluid density: **{density:.1f} kg/m³**")
-
-    # --- Calculation ---
-    g = 9.81  # m/s²
-
-    pressure_pa = density * g * depth
-    pressure_kpa = pressure_pa / 1_000
-    pressure_mpa = pressure_pa / 1_000_000
-    pressure_bar = pressure_pa / 100_000
-    gradient_kpa_m = pressure_kpa / depth if depth > 0 else 0
-
-    # --- Results ---
-    st.subheader("Results")
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Hydrostatic Pressure", f"{pressure_kpa:,.0f} kPa")
-    with c2:
-        st.metric("Hydrostatic Pressure", f"{pressure_mpa:.2f} MPa")
-    with c3:
-        st.metric("Hydrostatic Pressure", f"{pressure_bar:.2f} bar")
-
-    st.metric("Pressure Gradient", f"{gradient_kpa_m:.2f} kPa/m")
+        st.info("Enter a valid Depth and Density to calculate hydrostatic pressure.")
         
 # =========================
 # SETTINGS
