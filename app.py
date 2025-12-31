@@ -540,18 +540,20 @@ elif page == "Flow & Velocity":
     if segments:
         st.markdown("### Velocity by casing section (surface → depth)")
 
-        for i, s in enumerate(segments, start=1):
+                for i, s in enumerate(segments, start=1):
             with st.container(border=True):
-                cA, cB, cC = st.columns(3)
-                cA.metric("Section", f"{i}")
-                cB.metric("Depth", f"{s['from']:.0f}–{s['to']:.0f} m")
-                cC.metric("Casing ID", f"{s['id_mm']:.1f} mm")
+                left, right = st.columns([1, 1])
 
-                cD, cE, cF = st.columns(3)
-                cD.metric("Velocity", f"{s['vel']:.{decimals}f} m/min")
-                cE.metric("Length", f"{s['len']:.0f} m")
-                cF.metric("Share", f"{(s['len']/total_len*100):.0f}%")
+                with left:
+                    st.markdown(f"**Section {i}**")
+                    st.write(f"Depth: **{s['from']:.0f}–{s['to']:.0f} m**")
+                    st.write(f"Casing ID: **{s['id_mm']:.1f} mm**")
 
+                with right:
+                    st.markdown("**Velocity**")
+                    st.markdown(f"<div style='font-size: 26px; font-weight: 800; color: #F9FAFB;'>"
+                                f"{s['vel']:.{decimals}f} m/min</div>", unsafe_allow_html=True)
+                    st.write(f"Length: **{s['len']:.0f} m**")
         if avg_vel_to_depth is not None:
             st.success(f"Average annular velocity (length-weighted) to {depth_m:.0f} m: {avg_vel_to_depth:.{decimals}f} m/min")
 
