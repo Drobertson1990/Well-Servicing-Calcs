@@ -1,6 +1,7 @@
 import streamlit as st
 import math
 from datetime import datetime
+import json
 import base64
 from pathlib import Path
 import streamlit.components.v1 as components
@@ -53,6 +54,56 @@ if "job" not in st.session_state:
     st.session_state.job = default_job()
 
 job = st.session_state.job
+JOBS_DIR = Path("jobs")
+JOBS_DIR.mkdir(exist_ok=True)
+
+def _safe_job_filename(name: str) -> str:
+    name = (name or "").strip()
+    if not name:
+        name = "job"
+    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in name)
+    return safe[:60]
+
+def list_saved_jobs():
+    return sorted(
+        JOBS_DIR.glob("*.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+
+def save_job_to_file(job_obj: dict, job_name: str) -> Path:
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    fname = f"{_safe_job_filename(job_name)}__{now}.json"
+    path = JOBS_DIR / fname
+
+    job_obj.setdefault("meta", {})
+    job_obj["meta"]["name"] = job_name or job_obj["meta"].get("name") or "Untitled Job"
+    job_obj["meta"]["last_modified"] = datetime.now().isoformat(timespec="seconds")
+
+    path.write_text(json.dumps(job_obj, indent=2), encoding="utf-8")
+    return path
+
+def load_job_from_file(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8"))
+
+    data.setdefault("meta", {"name": None, "last_modified": None})
+    data.setdefault("ct", {"strings": [], "active_index": None})
+    data.setdefault("well", {
+        "tvd": None,
+        "kop": None,
+        "td": None,
+        "casing": [],
+        "restrictions": [],
+        "schematic": None
+    })
+    data.setdefault("fluids", {"base": None, "density": None, "chemicals": []})
+    data.setdefault("settings", {})
+
+    return data
+
+def delete_job_file(path: Path):
+    if path.exists():
+        path.unlink()
 
 def apply_theme(settings: dict):
     theme = settings.get("theme", "dark")
