@@ -944,6 +944,75 @@ elif page == "Pressure":
 
     else:
         st.info("Enter a valid Depth and Density to calculate hydrostatic pressure.")
+
+# =========================
+# Jobs
+# =========================
+
+elif page == "Jobs":
+
+    st.header("💾 Jobs")
+
+    st.subheader("Save Current Job")
+
+    default_name = job.get("meta", {}).get("name") or ""
+    job_name = st.text_input(
+        "Job name",
+        value=default_name,
+        placeholder="e.g., Rig 12 – Jan 15"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Save Job", use_container_width=True):
+            path = save_job_to_file(job, job_name)
+            st.success(f"Saved: {path.name}")
+
+    with col2:
+        json_bytes = json.dumps(job, indent=2).encode("utf-8")
+        st.download_button(
+            "Download JSON Backup",
+            data=json_bytes,
+            file_name=f"{job_name or 'job'}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+    st.divider()
+
+    st.subheader("Load / Delete Saved Jobs")
+
+    files = list_saved_jobs()
+
+    if not files:
+        st.info("No saved jobs yet.")
+    else:
+        options = {p.stem: p for p in files}
+        selected_key = st.selectbox("Saved Jobs", list(options.keys()))
+        selected_path = options[selected_key]
+
+        preview = json.loads(selected_path.read_text(encoding="utf-8"))
+        meta = preview.get("meta", {})
+
+        st.markdown(
+            f"**Name:** {meta.get('name')}  \n"
+            f"**Last Modified:** {meta.get('last_modified')}"
+        )
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            if st.button("Load Selected", use_container_width=True):
+                st.session_state.job = load_job_from_file(selected_path)
+                st.success("Job loaded.")
+                st.rerun()
+
+        with c2:
+            if st.button("Delete Selected", use_container_width=True):
+                delete_job_file(selected_path)
+                st.success("Deleted.")
+                st.rerun()
         
 # =========================
 # SETTINGS
