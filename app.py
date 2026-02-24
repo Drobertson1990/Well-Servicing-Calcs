@@ -180,7 +180,9 @@ page = st.sidebar.radio(
         "Volumes",
         "Fluids",
         "Pressure",
+        "Jobs",
         "Settings"
+    
     ],
     format_func=lambda x: {
         "Home": "🏠 Home",
@@ -190,6 +192,7 @@ page = st.sidebar.radio(
         "Volumes": "🧊 Volumes",
         "Fluids": "🧪 Fluids",
         "Pressure":"📉 Pressure",
+        "Jobs": "💾 Jobs",
         "Settings": "⚙️ Settings"
     }[x]
 )
