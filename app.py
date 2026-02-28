@@ -6,6 +6,17 @@ import base64
 from pathlib import Path
 import streamlit.components.v1 as components
 
+if "job" not in st.session_state:
+    st.session_state.job = {
+        "meta": {"name": None, "last_modified": None},
+        "ct": {"strings": [], "active_index": None},
+        "well": {"tvd": None, "kop": None, "td": None, "casing": [], "restrictions": [], "schematic": None},
+        "fluids": {"base": None, "density": None, "chemicals": []},
+        "settings": {}
+    }
+
+if "active_job_path" not in st.session_state:
+    st.session_state.active_job_path = None
 
 st.set_page_config(
     page_title="WellOps",
@@ -18,9 +29,6 @@ with st.sidebar:
 with st.sidebar:
 
     st.markdown("### 📂 Active Job")
-
-    job_meta = st.session_state.job.get("meta", {})
-    active_path = st.session_state.active_job_path
 
     if active_path:
         st.success(f"**{job_meta.get('name', 'Unnamed Job')}**")
