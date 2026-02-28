@@ -24,14 +24,14 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    st.image("assets/wellops_logo.png", use_column_width=True)
-
-with st.sidebar:
 
     st.markdown("### 📂 Active Job")
 
+    job_meta = st.session_state.job.get("meta", {})
+    active_path = st.session_state.active_job_path
+
     if active_path:
-        st.success(f"**{job_meta.get('name', 'Unnamed Job')}**")
+        st.success(f"**{job_meta.get('name') or 'Unnamed Job'}**")
         st.caption(f"Last saved: {job_meta.get('last_modified')}")
     else:
         st.warning("Unsaved Job")
