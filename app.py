@@ -195,9 +195,6 @@ apply_theme(job["settings"])
 # =========================
 
 page = st.sidebar.radio(
-    # Auto-save when switching pages if job already has a file
-if st.session_state.active_job_path:
-    save_job_to_file(st.session_state.job, st.session_state.job.get("meta", {}).get("name"))
     "Navigation",
     [
         "Home",
@@ -224,6 +221,12 @@ if st.session_state.active_job_path:
     }[x]
 )
 
+if st.session_state.active_job_path:
+    save_job_to_file(
+        st.session_state.job,
+        st.session_state.job.get("meta", {}).get("name")
+    )
+    
 if "page_override" in st.session_state:
     page = st.session_state.page_override
     del st.session_state.page_override
