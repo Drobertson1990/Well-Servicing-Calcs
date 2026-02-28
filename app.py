@@ -14,7 +14,20 @@ st.set_page_config(
 
 with st.sidebar:
     st.image("assets/wellops_logo.png", use_column_width=True)
-    
+
+with st.sidebar:
+
+    st.markdown("### 📂 Active Job")
+
+    job_meta = st.session_state.job.get("meta", {})
+    active_path = st.session_state.active_job_path
+
+    if active_path:
+        st.success(f"**{job_meta.get('name', 'Unnamed Job')}**")
+        st.caption(f"Last saved: {job_meta.get('last_modified')}")
+    else:
+        st.warning("Unsaved Job")
+        
 # =========================
 # APP STATE (REQUIRED)
 # =========================
@@ -53,6 +66,9 @@ def default_job():
 if "job" not in st.session_state:
     st.session_state.job = default_job()
 
+if "active_job_path" not in st.session_state:
+    st.session_state.active_job_path = None
+
 job = st.session_state.job
 JOBS_DIR = Path("jobs")
 JOBS_DIR.mkdir(exist_ok=True)
@@ -72,15 +88,23 @@ def list_saved_jobs():
     )
 
 def save_job_to_file(job_obj: dict, job_name: str) -> Path:
-    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fname = f"{_safe_job_filename(job_name)}__{now}.json"
-    path = JOBS_DIR / fname
 
     job_obj.setdefault("meta", {})
     job_obj["meta"]["name"] = job_name or job_obj["meta"].get("name") or "Untitled Job"
     job_obj["meta"]["last_modified"] = datetime.now().isoformat(timespec="seconds")
 
+    # If already saved before, overwrite existing file
+    if st.session_state.active_job_path:
+        path = Path(st.session_state.active_job_path)
+    else:
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        fname = f"{_safe_job_filename(job_name)}__{now}.json"
+        path = JOBS_DIR / fname
+
     path.write_text(json.dumps(job_obj, indent=2), encoding="utf-8")
+
+    st.session_state.active_job_path = str(path)
+
     return path
 
 def load_job_from_file(path: Path) -> dict:
@@ -171,6 +195,9 @@ apply_theme(job["settings"])
 # =========================
 
 page = st.sidebar.radio(
+    # Auto-save when switching pages if job already has a file
+if st.session_state.active_job_path:
+    save_job_to_file(st.session_state.job, st.session_state.job.get("meta", {}).get("name"))
     "Navigation",
     [
         "Home",
@@ -1005,6 +1032,7 @@ elif page == "Jobs":
         with c1:
             if st.button("Load Selected", use_container_width=True):
                 st.session_state.job = load_job_from_file(selected_path)
+                st.session_state.active_job_path = str(selected_path)
                 st.success("Job loaded.")
                 st.rerun()
 
